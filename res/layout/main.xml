@@ -4,12 +4,14 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:background="@color/background"
+    android:scrollbars="vertical"
     >
-<Button
-	android:id="@+id/wallpaper_changer" 
-	android:layout_width="wrap_content" 
-	android:layout_height="wrap_content" 
-	android:text="壁紙変更ボタン" 
+<!-- 
+<ImageButton
+	android:id="@+id/button"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
 	android:clickable="false">
-</Button>
+</ImageButton>
+-->
 </LinearLayout>
