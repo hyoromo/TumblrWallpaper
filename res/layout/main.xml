@@ -1,17 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:background="@color/background"
-    android:scrollbars="vertical"
-    >
-<!-- 
-<ImageButton
-	android:id="@+id/button"
-	android:layout_width="wrap_content"
-	android:layout_height="wrap_content"
-	android:clickable="false">
-</ImageButton>
--->
-</LinearLayout>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:fadingEdgeLength="100dip"
+	android:background="#000000">
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:orientation="vertical"
+		android:background="#FFFFFF">
+		<ImageButton
+			android:id="@+id/button00"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:clickable="false">
+		</ImageButton>
+		<ImageButton
+			android:id="@+id/button01"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:clickable="false">
+		</ImageButton>
+		<ImageButton
+			android:id="@+id/button02"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:clickable="false">
+		</ImageButton>
+		<ImageButton
+			android:id="@+id/button03"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:clickable="false">
+		</ImageButton>
+		<ImageButton
+			android:id="@+id/button04"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:clickable="false">
+		</ImageButton>
+	</LinearLayout>
+</ScrollView>

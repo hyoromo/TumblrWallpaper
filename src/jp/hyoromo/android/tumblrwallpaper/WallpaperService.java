@@ -17,31 +17,32 @@ import android.os.IBinder;
  */
 public class WallpaperService extends Service {
 
-	private static final String IMAGE_PATH = "PATH";
+    private static final String IMAGE_PATH = "PATH";
 
-	@Override
-	public IBinder onBind(Intent intent) {
-		return null;
-	}
-	
-	@Override
-	public void onStart (Intent intent, int startId) {
-		try {
-			// 指定URLより画像を取得
-			String imagePath = "";
-			Bundle extras = intent.getExtras();
-			if (extras != null) {
-				imagePath = extras.getString(IMAGE_PATH);
-			} else {
-				// デフォルトの壁紙設定
-				clearWallpaper();
-			}
-			URL url = new URL(imagePath);
-			InputStream is = url.openStream();
-			Bitmap bmp = BitmapFactory.decodeStream(is);
-			setWallpaper(bmp);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+    
+    @Override
+    public void onStart (Intent intent, int startId) {
+        try {
+            // 指定URLより画像を取得
+            String imagePath = "";
+            Bundle extras = intent.getExtras();
+            if (extras != null) {
+                imagePath = extras.getString(IMAGE_PATH);
+            } else {
+                // デフォルトの壁紙設定
+                clearWallpaper();
+            }
+            URL url = new URL(imagePath);
+            InputStream is = url.openStream();
+            Bitmap bmp = BitmapFactory.decodeStream(is);
+            setWallpaper(bmp);
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
