@@ -7,6 +7,7 @@ import java.net.URL;
 
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.view.View;
 
 /**
@@ -15,25 +16,36 @@ import android.view.View;
  */
 public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
 
-    private View view;
+    private View []mView;
+    private Handler mHandler;
 
-    public DownloadTask(View v) {
-        view = v;
+    public DownloadTask(View[] v, Handler handler) {
+        mView = v;
+        mHandler = handler;
     }
     
-    public Drawable downloadImage(String uri) {
+    public Drawable downloadImage(String[] uri) {
         URL url = null;
-        try {
-            url = new URL(uri);
-            InputStream is = url.openStream();
-            Drawable draw = Drawable.createFromStream(is, "");
-            view.setTag(url.toExternalForm());
-            is.close();
-            return draw;
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (int i = 0; i < uri.length; i++) {
+            final View view = mView[i];
+            try {
+                url = new URL(uri[i]);
+                InputStream is = url.openStream();
+                final Drawable draw = Drawable.createFromStream(is, "");
+                view.setTag(url.toExternalForm());
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        view.setBackgroundDrawable(draw);
+                    }
+                });
+                is.close();
+                //return draw;
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return null;
     }
@@ -43,13 +55,12 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
      * @param result
      */
     protected Drawable doInBackground(String... uri) {
-        return downloadImage(uri[0]);
+        return downloadImage(uri);
     }
     
     /**
      * 画面描画できるmainスレッドで実行したい処理
      */
     protected void onPostExecute(Drawable draw) {
-        view.setBackgroundDrawable(draw);
     }
 }
