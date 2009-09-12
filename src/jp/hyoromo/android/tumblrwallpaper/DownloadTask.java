@@ -16,36 +16,34 @@ import android.view.View;
  */
 public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
 
-    private View []mView;
+    private View mView;
     private Handler mHandler;
 
-    public DownloadTask(View[] v, Handler handler) {
-        mView = v;
+    public DownloadTask(View view, Handler handler) {
+        mView = view;
         mHandler = handler;
     }
     
-    public Drawable downloadImage(String[] uri) {
+    public Drawable downloadImage(String uri) {
         URL url = null;
-        for (int i = 0; i < uri.length; i++) {
-            final View view = mView[i];
-            try {
-                url = new URL(uri[i]);
-                InputStream is = url.openStream();
-                final Drawable draw = Drawable.createFromStream(is, "");
-                view.setTag(url.toExternalForm());
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        view.setBackgroundDrawable(draw);
-                    }
-                });
-                is.close();
-                //return draw;
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        final View view = mView;
+        try {
+            url = new URL(uri);
+            InputStream is = url.openStream();
+            final Drawable draw = Drawable.createFromStream(is, "");
+            view.setTag(url.toExternalForm());
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    view.setBackgroundDrawable(draw);
+                }
+            });
+            is.close();
+            //return draw;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return null;
     }
@@ -55,7 +53,7 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
      * @param result
      */
     protected Drawable doInBackground(String... uri) {
-        return downloadImage(uri);
+        return downloadImage(uri[0]);
     }
     
     /**
