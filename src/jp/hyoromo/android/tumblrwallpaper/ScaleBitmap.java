@@ -8,6 +8,7 @@ import android.util.Log;
 
 /**
  * Bitmapを指定サイズにスケールします。
+ * 
  * @author hyoromo
  */
 public class ScaleBitmap {

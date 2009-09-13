@@ -12,6 +12,7 @@ import android.view.View;
 
 /**
  * 非同期でWebから画像情報を取得してボタンに貼り付けます。
+ * 
  * @author hyoromo
  */
 public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
@@ -23,7 +24,7 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
         mView = view;
         mHandler = handler;
     }
-    
+
     public Drawable downloadImage(String uri) {
         URL url = null;
         final View view = mView;
@@ -39,7 +40,7 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
                 }
             });
             is.close();
-            //return draw;
+            // return draw;
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -48,17 +49,12 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
         return null;
     }
 
-    /**
-     * 独自スレッドでバックグラウンド処理
-     * @param result
-     */
+    /** 独自スレッドでバックグラウンド処理 */
     protected Drawable doInBackground(String... uri) {
         return downloadImage(uri[0]);
     }
-    
-    /**
-     * 画面描画できるmainスレッドで実行したい処理
-     */
+
+    /** 画面描画できるmainスレッドで実行したい処理 */
     protected void onPostExecute(Drawable draw) {
     }
 }

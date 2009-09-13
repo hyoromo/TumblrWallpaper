@@ -1,5 +1,5 @@
 package jp.hyoromo.android.tumblrwallpaper;
- 
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,28 +24,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ArrayAdapter;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
- 
+
 /**
-* Tumblr から画像情報を取得して、HOMEの壁紙として設定させるアプリ。
-* メイン処理は WallpaperService で行っている。
-* @author hyoromo
-*/
+ * Tumblr から画像情報を取得して、HOMEの壁紙として設定させるアプリ。 メイン処理は WallpaperService で行っている。
+ * 
+ * @author hyoromo
+ */
 public class TumblrWallpaper extends ListActivity {
- 
+
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 10;
     private Handler mHandler = new Handler();
- 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         // ログ収集開始
-        //Debug.startMethodTracing();
+        // Debug.startMethodTracing();
 
         setContentView(R.layout.main);
         // 画像URLを取得
@@ -54,43 +53,21 @@ public class TumblrWallpaper extends ListActivity {
         setListAdapter(new IconicAdapter(this, imageStr, mHandler));
 
         // ログ収集終了
-        //Debug.stopMethodTracing();
-    }
- 
-    /**
-    * 画像情報設定
-    * @param v ImageButton
-    * @param i
-    */
-    private void setDraw(View v, String imageStr) {
-        URL url;
-        try {
-            url = new URL(imageStr);
-            InputStream is = url.openStream();
-            Drawable draw = Drawable.createFromStream(is, "");
-            v.setBackgroundDrawable(draw);
-            v.setTag(url.toExternalForm());
-            is.close();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-        }
+        // Debug.stopMethodTracing();
     }
 
-    /**
-    * Tumblrから画像取得
-    */
+    /** Tumblrから画像取得 */
     private String[] getImage() {
         // 未実装（正規表現を使って画像を取得してくる予定
-        String []imageStr = new String[10];
+        String[] imageStr = new String[10];
         try {
             URL url = new URL("http://hyoromo.tumblr.com/");
             HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
-            Pattern p = Pattern.compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
+            Pattern p = Pattern
+                    .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
             urlCon.setRequestMethod("GET");
-            BufferedReader urlIn = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+            BufferedReader urlIn = new BufferedReader(new InputStreamReader(
+                    urlCon.getInputStream()));
             String str;
             int count = 0;
             while ((str = urlIn.readLine()) != null) {
@@ -102,11 +79,9 @@ public class TumblrWallpaper extends ListActivity {
                 }
             }
         } catch (MalformedURLException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-        e.printStackTrace();
+            e.printStackTrace();
         }
         return imageStr;
     }
@@ -133,12 +108,10 @@ public class TumblrWallpaper extends ListActivity {
         finish();
     }
 
-
     /**
-     * ArrayAdapter を拡張したクラス。
-     * 画像を一覧表示させている。
+     * ArrayAdapter を拡張したクラス。 画像を一覧表示させている。
      */
-    public class IconicAdapter extends ArrayAdapter {
+    public class IconicAdapter extends ArrayAdapter<Object> {
         Activity mContext;
         String[] mItems;
         Handler mHandler;
@@ -159,11 +132,9 @@ public class TumblrWallpaper extends ListActivity {
                 try {
                     URL url = new URL(mItems[i]);
                     InputStream is = url.openStream();
-                    //mBitmap[i] = BitmapFactory.decodeStream(is);
                     mBitmap[i] = BitmapFactory.decodeStream(is);
                     mDraw[i] = Drawable.createFromStream(is, "");
                     is.close();
-                    //return draw;
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
@@ -196,13 +167,14 @@ public class TumblrWallpaper extends ListActivity {
             return row;
         }
 
+/* 10件目以降は非同期で取得してくる予定
         // 画像をダウンロードして表示する
         private void downloadAndUpdateImage(int position, ImageButton v) {
             DownloadTask task = new DownloadTask(v, mHandler);
             task.execute(mItems[position]);
         }
+*/
     }
-
     static class ViewHolder {
         ImageView img;
     }
