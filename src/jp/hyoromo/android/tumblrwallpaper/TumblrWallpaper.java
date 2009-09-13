@@ -11,11 +11,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ListActivity;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -24,8 +30,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 /**
  * Tumblr から画像情報を取得して、HOMEの壁紙として設定させるアプリ。 メイン処理は WallpaperService で行っている。
@@ -37,6 +45,9 @@ public class TumblrWallpaper extends ListActivity {
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 10;
     private Handler mHandler = new Handler();
+    private AsyncTask<?, ?, ?> mTask;
+    private ProgressDialog mProgressDialog;
+    private Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -45,23 +56,71 @@ public class TumblrWallpaper extends ListActivity {
 
         // ログ収集開始
         // Debug.startMethodTracing();
-
         setContentView(R.layout.main);
-        // 画像URLを取得
-        String[] imageStr = getImage();
-        // リスト作成
-        setListAdapter(new IconicAdapter(this, imageStr, mHandler));
+
+        // 初期設定
+        mContext = this;
+        setNameDialog().show();
 
         // ログ収集終了
         // Debug.stopMethodTracing();
     }
 
+
+    private Dialog setNameDialog() {
+        LayoutInflater factory = LayoutInflater.from(mContext);
+        final View entryView = factory.inflate(R.layout.dialog_entry, null);
+
+        return new AlertDialog.Builder(mContext)
+        .setIcon(R.drawable.icon)
+        .setTitle("Set tumblr user name.")
+        .setView(entryView)
+        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                mProgressDialog = ProgressDialog.show(mContext, "Loading",
+                        "Image downloading...", true);
+                EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
+                String url = "http://" + edit.getText().toString() + ".tumblr.com/";
+                mTask = new ImageTask().execute(url);
+            }
+        })
+        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                finish();
+            }
+        })
+        .create();
+    }
+
+    class ImageTask extends AsyncTask<String, Void, Void> {
+
+        @Override
+        protected Void doInBackground(String... params) {
+            // 画像URLを取得
+            final String[] imageStr = getImage(params[0]);
+            final IconicAdapter adapter = new IconicAdapter(mContext, imageStr, mHandler);
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    // リスト作成
+                    setListAdapter(adapter);
+                }
+            });
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(final Void result) {
+            mProgressDialog.dismiss();
+        }
+    }
+
     /** Tumblrから画像取得 */
-    private String[] getImage() {
+    private String[] getImage(String tumblrUrl) {
         // 未実装（正規表現を使って画像を取得してくる予定
         String[] imageStr = new String[10];
         try {
-            URL url = new URL("http://hyoromo.tumblr.com/");
+            URL url = new URL(tumblrUrl);
             HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
             Pattern p = Pattern
                     .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
@@ -94,18 +153,23 @@ public class TumblrWallpaper extends ListActivity {
         // 画像を取得してスケール
         ViewHolder holder = (ViewHolder) v.getTag();
         BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
-        Bitmap bmp = draw.getBitmap();
-        bmp = ScaleBitmap.getScaleBitmap(bmp, hw, hh);
+         final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
 
+         mProgressDialog = ProgressDialog.show(this, "Wallpaper Setting",
+                 "The image is put on the wallpaper...", true);
         // 壁紙設定
-        try {
-            setWallpaper(bmp);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // 壁紙設定後に Activity を終了させる。
-        finish();
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    setWallpaper(bmp);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mProgressDialog.dismiss();
+                // 壁紙設定後に Activity を終了させる。
+                finish();
+            }
+        }).start();
     }
 
     /**
