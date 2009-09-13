@@ -12,42 +12,31 @@ import java.util.regex.Pattern;
 
 import android.app.Activity;
 import android.app.ListActivity;
-import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
-import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.ListView;
  
 /**
 * Tumblr から画像情報を取得して、HOMEの壁紙として設定させるアプリ。
 * メイン処理は WallpaperService で行っている。
 * @author hyoromo
 */
-public class TumblrWallpaper extends ListActivity implements OnClickListener {
+public class TumblrWallpaper extends ListActivity {
  
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 10;
-    private static final String IMAGE_PATH = "PATH";
-/*    
-    private int []id = {
-            R.id.button00,
-            R.id.button01,
-            R.id.button02,
-            R.id.button03,
-            R.id.button04,
-            R.id.button05,
-            R.id.button06,
-            R.id.button07,
-            R.id.button08,
-            R.id.button09
-    };
-*/
-    private ImageButton []button = new ImageButton[BUTTON_MAX];
     private Handler mHandler = new Handler();
  
     @Override
@@ -59,27 +48,11 @@ public class TumblrWallpaper extends ListActivity implements OnClickListener {
         //Debug.startMethodTracing();
 
         setContentView(R.layout.main);
-        
         // 画像URLを取得
         String[] imageStr = getImage();
-
+        // リスト作成
         setListAdapter(new IconicAdapter(this, imageStr, mHandler));
 
-/*
-        // ボタン初期設定
-        for (int i = 0; i < BUTTON_MAX; i++) {
-            button[i] = (ImageButton) this.findViewById(id[i]);
-            if (i < 1) {
-                // 通常画像設定
-                setDraw(button[i], imageStr[i]);
-            } else {
-                // 非同期で画像設定
-                //downloadAndUpdateImage(button[i], imageStr[i]);
-            }
-            button[i].setOnClickListener(this);
-        }
-        downloadAndUpdateImage(button, imageStr);
-*/
         // ログ収集終了
         //Debug.stopMethodTracing();
     }
@@ -138,20 +111,99 @@ public class TumblrWallpaper extends ListActivity implements OnClickListener {
         return imageStr;
     }
 
-    @Override
-    public void onClick(View v) {
-        // サービスをインテントで起動。
-        Intent intent = new Intent(TumblrWallpaper.this, WallpaperService.class);
-        intent.putExtra(IMAGE_PATH, (String)v.getTag());
-        startService(intent);
-        // サービスを起動させたら Activity は終了させておく。
+    public void onListItemClick(ListView parent, View v, int position, long id) {
+        // 端末の幅と高さ
+        int hw = getWallpaperDesiredMinimumWidth();
+        int hh = getWallpaperDesiredMinimumHeight();
+
+        // 画像を取得してスケール
+        ViewHolder holder = (ViewHolder) v.getTag();
+        BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
+        Bitmap bmp = draw.getBitmap();
+        bmp = ScaleBitmap.getScaleBitmap(bmp, hw, hh);
+
+        // 壁紙設定
+        try {
+            setWallpaper(bmp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 壁紙設定後に Activity を終了させる。
         finish();
     }
-/*
-    // 画像をダウンロードして表示する
-    private void downloadAndUpdateImage(View []v, String []imageStr) {
-        DownloadTask task = new DownloadTask(v, mHandler);
-        task.execute(imageStr);
+
+
+    /**
+     * ArrayAdapter を拡張したクラス。
+     * 画像を一覧表示させている。
+     */
+    public class IconicAdapter extends ArrayAdapter {
+        Activity mContext;
+        String[] mItems;
+        Handler mHandler;
+        LayoutInflater mInflater;
+        Drawable[] mDraw;
+        Bitmap[] mBitmap;
+
+        IconicAdapter(Activity context, String[] items, Handler handler) {
+            super(context, R.layout.row, items);
+            mContext = context;
+            mItems = items;
+            mHandler = handler;
+            mInflater = LayoutInflater.from(mContext);
+
+            mDraw = new Drawable[BUTTON_MAX];
+            mBitmap = new Bitmap[BUTTON_MAX];
+            for (int i = 0; i < BUTTON_MAX; i++) {
+                try {
+                    URL url = new URL(mItems[i]);
+                    InputStream is = url.openStream();
+                    //mBitmap[i] = BitmapFactory.decodeStream(is);
+                    mBitmap[i] = BitmapFactory.decodeStream(is);
+                    mDraw[i] = Drawable.createFromStream(is, "");
+                    is.close();
+                    //return draw;
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+
+        /** 画面に表示される毎に呼び出される */
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View row = convertView;
+            ViewHolder holder;
+
+            if (row == null) {
+                row = mInflater.inflate(R.layout.row, null);
+                holder = new ViewHolder();
+
+                // 画像イメージを作成
+                holder.img = (ImageView) row.findViewById(R.id.image);
+
+                row.setTag(holder);
+            } else {
+                holder = (ViewHolder) row.getTag();
+            }
+
+            holder.img.setImageBitmap(mBitmap[position]);
+            holder.img.setTag(mItems[position]);
+
+            return row;
+        }
+
+        // 画像をダウンロードして表示する
+        private void downloadAndUpdateImage(int position, ImageButton v) {
+            DownloadTask task = new DownloadTask(v, mHandler);
+            task.execute(mItems[position]);
+        }
     }
-*/
+
+    static class ViewHolder {
+        ImageView img;
+    }
 }
