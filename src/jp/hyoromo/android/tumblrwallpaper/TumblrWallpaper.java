@@ -15,12 +15,10 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,7 +31,6 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.TextView;
 
 /**
  * Tumblr から画像情報を取得して、HOMEの壁紙として設定させるアプリ。 メイン処理は WallpaperService で行っている。
@@ -68,10 +65,10 @@ public class TumblrWallpaper extends ListActivity {
 
 
     private Dialog setNameDialog() {
-        LayoutInflater factory = LayoutInflater.from(mContext);
+        LayoutInflater factory = LayoutInflater.from(this);
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
 
-        return new AlertDialog.Builder(mContext)
+        return new AlertDialog.Builder(this)
         .setIcon(R.drawable.icon)
         .setTitle("Set tumblr user name.")
         .setView(entryView)
@@ -118,7 +115,7 @@ public class TumblrWallpaper extends ListActivity {
     /** Tumblrから画像取得 */
     private String[] getImage(String tumblrUrl) {
         // 未実装（正規表現を使って画像を取得してくる予定
-        String[] imageStr = new String[10];
+        String[] imageStr = new String[BUTTON_MAX];
         try {
             URL url = new URL(tumblrUrl);
             HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
@@ -149,6 +146,7 @@ public class TumblrWallpaper extends ListActivity {
         // 端末の幅と高さ
         int hw = getWallpaperDesiredMinimumWidth();
         int hh = getWallpaperDesiredMinimumHeight();
+        Log.d(TAG, "bmpX:" + hw + "/bmpY:" + hh);
 
         // 画像を取得してスケール
         ViewHolder holder = (ViewHolder) v.getTag();
@@ -180,7 +178,6 @@ public class TumblrWallpaper extends ListActivity {
         String[] mItems;
         Handler mHandler;
         LayoutInflater mInflater;
-        Drawable[] mDraw;
         Bitmap[] mBitmap;
 
         IconicAdapter(Activity context, String[] items, Handler handler) {
@@ -190,14 +187,18 @@ public class TumblrWallpaper extends ListActivity {
             mHandler = handler;
             mInflater = LayoutInflater.from(mContext);
 
-            mDraw = new Drawable[BUTTON_MAX];
             mBitmap = new Bitmap[BUTTON_MAX];
             for (int i = 0; i < BUTTON_MAX; i++) {
                 try {
                     URL url = new URL(mItems[i]);
-                    InputStream is = url.openStream();
+                    final InputStream is = url.openStream();
+                    try {
+                        Thread.sleep(250);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     mBitmap[i] = BitmapFactory.decodeStream(is);
-                    mDraw[i] = Drawable.createFromStream(is, "");
+                    Log.d(TAG, "No." + Integer.valueOf(i) + "width:" + mBitmap[i].getWidth() + "height:" + mBitmap[i].getHeight());
                     is.close();
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -227,6 +228,7 @@ public class TumblrWallpaper extends ListActivity {
 
             holder.img.setImageBitmap(mBitmap[position]);
             holder.img.setTag(mItems[position]);
+            //Log.d(TAG, "No." + Integer.valueOf(position) + "width:" + mBitmap[position].getWidth() + "height:" + mBitmap[position].getHeight());
 
             return row;
         }
