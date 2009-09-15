@@ -14,7 +14,6 @@
         android:textAppearance="?android:attr/textAppearanceMedium" />
     <EditText
         android:id="@+id/username_edit"
-        android:text="hyoromo"
         android:layout_height="wrap_content"
         android:layout_width="fill_parent"
         android:layout_marginLeft="20dip"

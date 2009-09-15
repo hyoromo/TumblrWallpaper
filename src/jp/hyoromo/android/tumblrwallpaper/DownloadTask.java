@@ -49,12 +49,16 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
         return null;
     }
 
-    /** 独自スレッドでバックグラウンド処理 */
+    /**
+     * 独自スレッドでバックグラウンド処理
+     */
     protected Drawable doInBackground(String... uri) {
         return downloadImage(uri[0]);
     }
 
-    /** 画面描画できるmainスレッドで実行したい処理 */
+    /**
+     * 画面描画できるmainスレッドで実行したい処理
+     */
     protected void onPostExecute(Drawable draw) {
     }
 }

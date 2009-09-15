@@ -16,6 +16,7 @@ import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -42,7 +43,6 @@ public class TumblrWallpaper extends ListActivity {
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 10;
     private Handler mHandler = new Handler();
-    private AsyncTask<?, ?, ?> mTask;
     private ProgressDialog mProgressDialog;
     private Activity mContext;
 
@@ -63,34 +63,57 @@ public class TumblrWallpaper extends ListActivity {
         // Debug.stopMethodTracing();
     }
 
-
+    /**
+     * 取得URL設定ダイアログ
+     */
     private Dialog setNameDialog() {
         LayoutInflater factory = LayoutInflater.from(this);
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
+        final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
+        edit.setText(getPreferences("name", ""));
 
-        return new AlertDialog.Builder(this)
-        .setIcon(R.drawable.icon)
-        .setTitle("Set tumblr user name.")
-        .setView(entryView)
-        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                mProgressDialog = ProgressDialog.show(mContext, "Loading",
-                        "Image downloading...", true);
-                EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
-                String url = "http://" + edit.getText().toString() + ".tumblr.com/";
-                mTask = new ImageTask().execute(url);
-            }
-        })
-        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(
+                "Set tumblr user name.").setView(entryView).setPositiveButton("OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        mProgressDialog = ProgressDialog.show(mContext, "Loading",
+                                "Image downloading...", true);
+                        // EditText edit = (EditText) entryView
+                        // .findViewById(R.id.username_edit);
+                        String editStr = edit.getText().toString();
+                        String url = "http://" + editStr + ".tumblr.com/";
+                        new ImageTask().execute(url);
+                        setPreferences("name", editStr);
+                    }
+                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 finish();
             }
-        })
-        .create();
+        }).create();
     }
 
-    class ImageTask extends AsyncTask<String, Void, Void> {
+    /**
+     * プリファレンス情報設定
+     */
+    private void setPreferences(String keyname, String key) {
+        SharedPreferences settings = getSharedPreferences("TumblrWallpaper", MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString(keyname, key);
+        editor.commit();
+    }
 
+    /**
+     * プリファレンス情報取得
+     */
+    private String getPreferences(String keyname, String key) {
+        SharedPreferences settings = getSharedPreferences("TumblrWallpaper", MODE_PRIVATE);
+        return settings.getString(keyname, key);
+    }
+
+    /**
+     * 非同期で画像データ取得し、同期を取って画面上に表示させる
+     */
+    class ImageTask extends AsyncTask<String, Void, Void> {
         @Override
         protected Void doInBackground(String... params) {
             // 画像URLを取得
@@ -112,7 +135,9 @@ public class TumblrWallpaper extends ListActivity {
         }
     }
 
-    /** Tumblrから画像取得 */
+    /**
+     * Tumblrから画像取得
+     */
     private String[] getImage(String tumblrUrl) {
         // 未実装（正規表現を使って画像を取得してくる予定
         String[] imageStr = new String[BUTTON_MAX];
@@ -122,8 +147,8 @@ public class TumblrWallpaper extends ListActivity {
             Pattern p = Pattern
                     .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
             urlCon.setRequestMethod("GET");
-            BufferedReader urlIn = new BufferedReader(new InputStreamReader(
-                    urlCon.getInputStream()));
+            BufferedReader urlIn = new BufferedReader(
+                    new InputStreamReader(urlCon.getInputStream()));
             String str;
             int count = 0;
             while ((str = urlIn.readLine()) != null) {
@@ -142,6 +167,9 @@ public class TumblrWallpaper extends ListActivity {
         return imageStr;
     }
 
+    /**
+     * Listがクリックされたら選択画像を壁紙設定する
+     */
     public void onListItemClick(ListView parent, View v, int position, long id) {
         // 端末の幅と高さ
         int hw = getWallpaperDesiredMinimumWidth();
@@ -151,10 +179,10 @@ public class TumblrWallpaper extends ListActivity {
         // 画像を取得してスケール
         ViewHolder holder = (ViewHolder) v.getTag();
         BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
-         final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
+        final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
 
-         mProgressDialog = ProgressDialog.show(this, "Wallpaper Setting",
-                 "The image is put on the wallpaper...", true);
+        mProgressDialog = ProgressDialog.show(this, "Wallpaper Setting",
+                "The image is put on the wallpaper...", true);
         // 壁紙設定
         new Thread(new Runnable() {
             public void run() {
@@ -193,12 +221,13 @@ public class TumblrWallpaper extends ListActivity {
                     URL url = new URL(mItems[i]);
                     final InputStream is = url.openStream();
                     try {
-                        Thread.sleep(250);
+                        Thread.sleep(500);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     mBitmap[i] = BitmapFactory.decodeStream(is);
-                    Log.d(TAG, "No." + Integer.valueOf(i) + "width:" + mBitmap[i].getWidth() + "height:" + mBitmap[i].getHeight());
+                    Log.d(TAG, "No." + Integer.valueOf(i) + "width:" + mBitmap[i].getWidth()
+                            + "height:" + mBitmap[i].getHeight());
                     is.close();
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -209,7 +238,9 @@ public class TumblrWallpaper extends ListActivity {
 
         }
 
-        /** 画面に表示される毎に呼び出される */
+        /**
+         * 画面に表示される毎に呼び出される
+         */
         public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
             ViewHolder holder;
@@ -228,19 +259,17 @@ public class TumblrWallpaper extends ListActivity {
 
             holder.img.setImageBitmap(mBitmap[position]);
             holder.img.setTag(mItems[position]);
-            //Log.d(TAG, "No." + Integer.valueOf(position) + "width:" + mBitmap[position].getWidth() + "height:" + mBitmap[position].getHeight());
 
             return row;
         }
 
-/* 10件目以降は非同期で取得してくる予定
-        // 画像をダウンロードして表示する
-        private void downloadAndUpdateImage(int position, ImageButton v) {
-            DownloadTask task = new DownloadTask(v, mHandler);
-            task.execute(mItems[position]);
-        }
-*/
+        /*
+         * 10件目以降は非同期で取得してくる予定 // 画像をダウンロードして表示する private void downloadAndUpdateImage(int position,
+         * ImageButton v) { DownloadTask task = new DownloadTask(v, mHandler);
+         * task.execute(mItems[position]); }
+         */
     }
+
     static class ViewHolder {
         ImageView img;
     }
