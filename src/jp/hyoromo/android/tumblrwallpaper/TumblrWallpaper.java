@@ -23,7 +23,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,13 +41,13 @@ import android.widget.ListView;
 public class TumblrWallpaper extends ListActivity {
 
     private static final String TAG = "TumblrWallpaper";
-    private static final int BUTTON_MAX = 10;
+    private static final int BUTTON_MAX = 5;
     private static final int SLEEP_TIME = 250;
-    private static Handler mHandler = new Handler();
     private static ProgressDialog mProgressDialog;
     private static Context mContext;
     private static Activity mActivity;
-    //private static Activity mContext;
+
+    // private static Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -77,12 +76,14 @@ public class TumblrWallpaper extends ListActivity {
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
         edit.setText(getPreferences("name", ""));
 
-        return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(
-                "Set tumblr user name.").setView(entryView).setPositiveButton("OK",
-                new DialogInterface.OnClickListener() {
+        return new AlertDialog.Builder(this)
+            .setIcon(R.drawable.icon)
+            .setTitle(R.string.load_alert_name_dialog_title)
+            .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        mProgressDialog = ProgressDialog.show(mActivity, "Loading",
-                                "Image downloading...", true);
+                        String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
+                        String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
+                        showPrrogressDialog(mes1, mes2);
                         String editStr = edit.getText().toString();
                         String url = "http://" + editStr + ".tumblr.com/";
                         new ImageTask().execute(url);
@@ -113,27 +114,29 @@ public class TumblrWallpaper extends ListActivity {
         return settings.getString(keyname, key);
     }
 
+    /*
+     * Load時のプログレスダイアログ表示
+     */
+    private void showPrrogressDialog(String mes1, String mes2) {
+        mProgressDialog = ProgressDialog.show(mActivity, mes1, mes2, true);
+    }
+
     /**
      * 非同期で画像データ取得し、同期を取って画面上に表示させる
      */
-    class ImageTask extends AsyncTask<String, Void, Void> {
+    class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
-        protected Void doInBackground(String... params) {
+        protected IconicAdapter doInBackground(String... params) {
             // 画像URLを取得
             final String[] imageStr = getImage(params[0]);
             final IconicAdapter adapter = new IconicAdapter(imageStr);
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    // リスト作成
-                    setListAdapter(adapter);
-                }
-            });
-            return null;
+
+            return adapter;
         }
 
         @Override
-        protected void onPostExecute(final Void result) {
+        protected void onPostExecute(IconicAdapter adapter) {
+            setListAdapter(adapter);
             mProgressDialog.dismiss();
         }
     }
@@ -153,7 +156,7 @@ public class TumblrWallpaper extends ListActivity {
                     new InputStreamReader(urlCon.getInputStream()));
             String str;
             int count = 0;
-            while ((str = urlIn.readLine()) != null) {
+            while ((str = urlIn.readLine()) != null && count < BUTTON_MAX) {
                 Matcher m = p.matcher(str);
                 if (m.find()) {
                     imageStr[count] = m.group().replaceAll("400", "250");
@@ -182,7 +185,7 @@ public class TumblrWallpaper extends ListActivity {
             mBitmap = new Bitmap[BUTTON_MAX];
 
             for (int i = 0; i < BUTTON_MAX; i++) {
-                mBitmap[i] = getBitmap (mItems[i], 0, 0);
+                mBitmap[i] = getBitmap(mItems[i], 0, 0);
             }
         }
 
@@ -239,7 +242,7 @@ public class TumblrWallpaper extends ListActivity {
             is.close();
 
             // 取得できなかった場合は再取得処理
-            if (bmp == null && count < 3) {
+            if (bmp == null && count < 4) {
                 int time = 0;
                 // 読み込み漏らしサイズ量でsleep時間を増やす
                 if (dataSize > 200) {
@@ -267,26 +270,29 @@ public class TumblrWallpaper extends ListActivity {
      */
     public void onListItemClick(ListView parent, View v, int position, long id) {
         // 端末の幅と高さ
-        int hw = getWallpaperDesiredMinimumWidth();
-        int hh = getWallpaperDesiredMinimumHeight();
+        final int hw = getWallpaperDesiredMinimumWidth();
+        final int hh = getWallpaperDesiredMinimumHeight();
         Log.d(TAG, "bmpX:" + hw + "/bmpY:" + hh);
 
         // 画像を取得してスケール
         ViewHolder holder = (ViewHolder) v.getTag();
-        String str = ((String) holder.img.getTag()).replaceAll("250", "500");
+        final String str = ((String) holder.img.getTag()).replaceAll("250", "500");
 
-        final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
-        /* 250px size の画像を引き延ばすと汚いのでやめた
-        BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
-        final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
-        */
+        /*
+         * 250px size の画像を引き延ばすと汚いのでやめた BitmapDrawable draw = (BitmapDrawable)
+         * holder.img.getDrawable(); final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(),
+         * hw, hh);
+         */
 
-        mProgressDialog = ProgressDialog.show(mActivity, "Wallpaper Setting",
-                "The image is put on the wallpaper...", true);
+        String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
+        String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
+        showPrrogressDialog(mes1, mes2);
+
         // 壁紙設定
         new Thread(new Runnable() {
             public void run() {
                 try {
+                    final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
                     setWallpaper(bmp);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -303,8 +309,8 @@ public class TumblrWallpaper extends ListActivity {
         super.onDestroy();
         Log.v(TAG, "onDestroy");
 
+        mActivity = null;
         mContext = null;
         mProgressDialog = null;
-        mHandler = null;
-   }
+    }
 }
