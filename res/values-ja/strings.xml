@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TumblrWallpaper</string>
+    <string name="wallpaperChangerButton_name">WallpaperCanger</string>
+    <string name="load_alert_name_dialog_name">アカウント名</string>
+    <string name="load_alert_name_dialog_title">Tumblrのアカウント名\nを入力してください。</string>
+    <string name="load_progress_dialog_mes1">起動中</string>
+    <string name="load_progress_dialog_mes2">画像を取得中です。\nしばらくお待ちください...</string>
+    <string name="wallpaper_progress_dialog_mes1">壁紙設定中</string>
+    <string name="wallpaper_progress_dialog_mes2">壁紙を設定中です。\nしばらくお待ちください...</string>
+</resources>
