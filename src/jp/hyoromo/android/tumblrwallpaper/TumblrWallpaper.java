@@ -1,5 +1,6 @@
 package jp.hyoromo.android.tumblrwallpaper;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,11 +16,11 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,9 +43,12 @@ public class TumblrWallpaper extends ListActivity {
 
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 10;
-    private Handler mHandler = new Handler();
-    private ProgressDialog mProgressDialog;
-    private Activity mContext;
+    private static final int SLEEP_TIME = 250;
+    private static Handler mHandler = new Handler();
+    private static ProgressDialog mProgressDialog;
+    private static Context mContext;
+    private static Activity mActivity;
+    //private static Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -56,7 +60,8 @@ public class TumblrWallpaper extends ListActivity {
         setContentView(R.layout.main);
 
         // 初期設定
-        mContext = this;
+        mContext = getApplicationContext();
+        mActivity = this;
         setNameDialog().show();
 
         // ログ収集終了
@@ -76,10 +81,8 @@ public class TumblrWallpaper extends ListActivity {
                 "Set tumblr user name.").setView(entryView).setPositiveButton("OK",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        mProgressDialog = ProgressDialog.show(mContext, "Loading",
+                        mProgressDialog = ProgressDialog.show(mActivity, "Loading",
                                 "Image downloading...", true);
-                        // EditText edit = (EditText) entryView
-                        // .findViewById(R.id.username_edit);
                         String editStr = edit.getText().toString();
                         String url = "http://" + editStr + ".tumblr.com/";
                         new ImageTask().execute(url);
@@ -118,7 +121,7 @@ public class TumblrWallpaper extends ListActivity {
         protected Void doInBackground(String... params) {
             // 画像URLを取得
             final String[] imageStr = getImage(params[0]);
-            final IconicAdapter adapter = new IconicAdapter(mContext, imageStr, mHandler);
+            final IconicAdapter adapter = new IconicAdapter(imageStr);
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -139,7 +142,6 @@ public class TumblrWallpaper extends ListActivity {
      * Tumblrから画像取得
      */
     private String[] getImage(String tumblrUrl) {
-        // 未実装（正規表現を使って画像を取得してくる予定
         String[] imageStr = new String[BUTTON_MAX];
         try {
             URL url = new URL(tumblrUrl);
@@ -154,8 +156,8 @@ public class TumblrWallpaper extends ListActivity {
             while ((str = urlIn.readLine()) != null) {
                 Matcher m = p.matcher(str);
                 if (m.find()) {
-                    Log.d(TAG, m.group());
-                    imageStr[count] = m.group();
+                    imageStr[count] = m.group().replaceAll("400", "250");
+                    Log.d(TAG, imageStr[count]);
                     count++;
                 }
             }
@@ -168,74 +170,20 @@ public class TumblrWallpaper extends ListActivity {
     }
 
     /**
-     * Listがクリックされたら選択画像を壁紙設定する
-     */
-    public void onListItemClick(ListView parent, View v, int position, long id) {
-        // 端末の幅と高さ
-        int hw = getWallpaperDesiredMinimumWidth();
-        int hh = getWallpaperDesiredMinimumHeight();
-        Log.d(TAG, "bmpX:" + hw + "/bmpY:" + hh);
-
-        // 画像を取得してスケール
-        ViewHolder holder = (ViewHolder) v.getTag();
-        BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
-        final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
-
-        mProgressDialog = ProgressDialog.show(this, "Wallpaper Setting",
-                "The image is put on the wallpaper...", true);
-        // 壁紙設定
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    setWallpaper(bmp);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mProgressDialog.dismiss();
-                // 壁紙設定後に Activity を終了させる。
-                finish();
-            }
-        }).start();
-    }
-
-    /**
      * ArrayAdapter を拡張したクラス。 画像を一覧表示させている。
      */
     public class IconicAdapter extends ArrayAdapter<Object> {
-        Activity mContext;
         String[] mItems;
-        Handler mHandler;
-        LayoutInflater mInflater;
-        Bitmap[] mBitmap;
+        private final Bitmap[] mBitmap;
 
-        IconicAdapter(Activity context, String[] items, Handler handler) {
-            super(context, R.layout.row, items);
-            mContext = context;
+        IconicAdapter(String[] items) {
+            super(mContext, R.layout.row, items);
             mItems = items;
-            mHandler = handler;
-            mInflater = LayoutInflater.from(mContext);
-
             mBitmap = new Bitmap[BUTTON_MAX];
-            for (int i = 0; i < BUTTON_MAX; i++) {
-                try {
-                    URL url = new URL(mItems[i]);
-                    final InputStream is = url.openStream();
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    mBitmap[i] = BitmapFactory.decodeStream(is);
-                    Log.d(TAG, "No." + Integer.valueOf(i) + "width:" + mBitmap[i].getWidth()
-                            + "height:" + mBitmap[i].getHeight());
-                    is.close();
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
 
+            for (int i = 0; i < BUTTON_MAX; i++) {
+                mBitmap[i] = getBitmap (mItems[i], 0, 0);
+            }
         }
 
         /**
@@ -246,7 +194,8 @@ public class TumblrWallpaper extends ListActivity {
             ViewHolder holder;
 
             if (row == null) {
-                row = mInflater.inflate(R.layout.row, null);
+                LayoutInflater inflater = LayoutInflater.from(mContext);
+                row = inflater.inflate(R.layout.row, null);
                 holder = new ViewHolder();
 
                 // 画像イメージを作成
@@ -273,4 +222,89 @@ public class TumblrWallpaper extends ListActivity {
     static class ViewHolder {
         ImageView img;
     }
+
+    private Bitmap getBitmap(final String urlStr, int count, int sleepTime) {
+        Bitmap bmp = null;
+        try {
+            int DEFAULT_BUFFER_SIZE = 1024 * 100;
+            URL url = new URL(urlStr);
+            InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
+
+            // 取得失敗時は少し待機してから再取得する
+            Thread.sleep((SLEEP_TIME + sleepTime) * count);
+            bmp = BitmapFactory.decodeStream(is);
+
+            int dataSize = is.read();
+            Log.v(TAG, urlStr + " : " + Integer.toString(dataSize) + " : " + bmp);
+            is.close();
+
+            // 取得できなかった場合は再取得処理
+            if (bmp == null && count < 3) {
+                int time = 0;
+                // 読み込み漏らしサイズ量でsleep時間を増やす
+                if (dataSize > 200) {
+                    time = SLEEP_TIME * 3;
+                } else if (dataSize > 150) {
+                    time = SLEEP_TIME * 2;
+                } else if (dataSize > 100) {
+                    time = SLEEP_TIME;
+                }
+                bmp = getBitmap(urlStr, ++count, time);
+            }
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return bmp;
+    }
+
+    /**
+     * Listがクリックされたら選択画像を壁紙設定する
+     */
+    public void onListItemClick(ListView parent, View v, int position, long id) {
+        // 端末の幅と高さ
+        int hw = getWallpaperDesiredMinimumWidth();
+        int hh = getWallpaperDesiredMinimumHeight();
+        Log.d(TAG, "bmpX:" + hw + "/bmpY:" + hh);
+
+        // 画像を取得してスケール
+        ViewHolder holder = (ViewHolder) v.getTag();
+        String str = ((String) holder.img.getTag()).replaceAll("250", "500");
+
+        final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
+        /* 250px size の画像を引き延ばすと汚いのでやめた
+        BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable();
+        final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
+        */
+
+        mProgressDialog = ProgressDialog.show(mActivity, "Wallpaper Setting",
+                "The image is put on the wallpaper...", true);
+        // 壁紙設定
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    setWallpaper(bmp);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mProgressDialog.dismiss();
+                // 壁紙設定後に Activity を終了させる。
+                finish();
+            }
+        }).start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.v(TAG, "onDestroy");
+
+        mContext = null;
+        mProgressDialog = null;
+        mHandler = null;
+   }
 }
