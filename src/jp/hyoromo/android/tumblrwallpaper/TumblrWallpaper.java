@@ -42,6 +42,7 @@ public class TumblrWallpaper extends ListActivity {
 
     private static final String TAG = "TumblrWallpaper";
     private static final int BUTTON_MAX = 5;
+    private static final int LIST_MAX = 10;
     private static final int SLEEP_TIME = 250;
     private static ProgressDialog mProgressDialog;
     private static Context mContext;
@@ -76,24 +77,22 @@ public class TumblrWallpaper extends ListActivity {
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
         edit.setText(getPreferences("name", ""));
 
-        return new AlertDialog.Builder(this)
-            .setIcon(R.drawable.icon)
-            .setTitle(R.string.load_alert_name_dialog_title)
-            .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
+                .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
                         String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
                         showPrrogressDialog(mes1, mes2);
                         String editStr = edit.getText().toString();
-                        String url = "http://" + editStr + ".tumblr.com/";
+                        String url = "http://" + editStr + ".tumblr.com/page/";
                         new ImageTask().execute(url);
                         setPreferences("name", editStr);
                     }
                 }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                finish();
-            }
-        }).create();
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        finish();
+                    }
+                }).create();
     }
 
     /**
@@ -145,29 +144,32 @@ public class TumblrWallpaper extends ListActivity {
      * Tumblrから画像取得
      */
     private String[] getImage(String tumblrUrl) {
-        String[] imageStr = new String[BUTTON_MAX];
-        try {
-            URL url = new URL(tumblrUrl);
-            HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
-            Pattern p = Pattern
-                    .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
-            urlCon.setRequestMethod("GET");
-            BufferedReader urlIn = new BufferedReader(
-                    new InputStreamReader(urlCon.getInputStream()));
-            String str;
-            int count = 0;
-            while ((str = urlIn.readLine()) != null && count < BUTTON_MAX) {
-                Matcher m = p.matcher(str);
-                if (m.find()) {
-                    imageStr[count] = m.group().replaceAll("400", "250");
-                    Log.d(TAG, imageStr[count]);
-                    count++;
+        int count = 0;
+        int page = 1;
+        String[] imageStr = new String[LIST_MAX];
+        while (count < LIST_MAX) {
+            try {
+                URL url = new URL(tumblrUrl + Integer.toString(page++));
+                HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
+                Pattern p = Pattern
+                        .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
+                urlCon.setRequestMethod("GET");
+                BufferedReader urlIn = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+                String str;
+                while ((str = urlIn.readLine()) != null && count < LIST_MAX) {
+                    Matcher m = p.matcher(str);
+                    if (m.find()) {
+                        imageStr[count] = m.group().replaceAll("_400.", "_250.");
+                        Log.d(TAG, imageStr[count]);
+                        count++;
+                    }
                 }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                // 【未実装】「指定URLが存在しません」ダイアログ表示後、アカウント名入力ダイアログまで戻す。
+                e.printStackTrace();
             }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         return imageStr;
     }
@@ -216,9 +218,8 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         /*
-         * 10件目以降は非同期で取得してくる予定 // 画像をダウンロードして表示する private void downloadAndUpdateImage(int position,
-         * ImageButton v) { DownloadTask task = new DownloadTask(v, mHandler);
-         * task.execute(mItems[position]); }
+         * 10件目以降は非同期で取得してくる予定 // 画像をダウンロードして表示する private void downloadAndUpdateImage(int position, ImageButton v) {
+         * DownloadTask task = new DownloadTask(v, mHandler); task.execute(mItems[position]); }
          */
     }
 
@@ -257,7 +258,19 @@ public class TumblrWallpaper extends ListActivity {
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            String newStr = "";
+            if (Pattern.compile(".+_500\\..+").matcher(urlStr).matches()) {
+                newStr = urlStr.replaceAll("_500.", "_400.");
+            } else if (Pattern.compile(".+_400\\..+").matcher(urlStr).matches()) {
+                newStr = urlStr.replaceAll("_400.", "_250.");
+            } else if (Pattern.compile(".+_250\\..+").matcher(urlStr).matches()) {
+                newStr = urlStr.replaceAll("_250.", "_100.");
+            } else {
+                // 【未実装】壁紙貼り付け失敗ダイアログ表示
+                e.printStackTrace();
+            }
+            bmp = getBitmap(newStr, count, 0);
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -276,12 +289,11 @@ public class TumblrWallpaper extends ListActivity {
 
         // 画像を取得してスケール
         ViewHolder holder = (ViewHolder) v.getTag();
-        final String str = ((String) holder.img.getTag()).replaceAll("250", "500");
+        final String str = ((String) holder.img.getTag()).replaceAll("_250.", "_500.");
 
         /*
-         * 250px size の画像を引き延ばすと汚いのでやめた BitmapDrawable draw = (BitmapDrawable)
-         * holder.img.getDrawable(); final Bitmap bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(),
-         * hw, hh);
+         * 250px size の画像を引き延ばすと汚いのでやめた BitmapDrawable draw = (BitmapDrawable) holder.img.getDrawable(); final Bitmap
+         * bmp = ScaleBitmap.getScaleBitmap(draw.getBitmap(), hw, hh);
          */
 
         String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
