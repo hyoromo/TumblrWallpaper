@@ -41,9 +41,10 @@ import android.widget.ListView;
 public class TumblrWallpaper extends ListActivity {
 
     private static final String TAG = "TumblrWallpaper";
-    private static final int BUTTON_MAX = 5;
+    private static final int BUTTON_MAX = 10;
     private static final int LIST_MAX = 10;
     private static final int SLEEP_TIME = 250;
+    private static final int DEFAULT_BUFFER_SIZE = 1024 * 100;
     private static ProgressDialog mProgressDialog;
     private static Context mContext;
     private static Activity mActivity;
@@ -127,8 +128,10 @@ public class TumblrWallpaper extends ListActivity {
         @Override
         protected IconicAdapter doInBackground(String... params) {
             // 画像URLを取得
-            final String[] imageStr = getImage(params[0]);
-            final IconicAdapter adapter = new IconicAdapter(imageStr);
+            String[] imageStr = getImage(params[0]);
+            String[] imageStr2 = new String[BUTTON_MAX];
+            for (int i = 0; i < BUTTON_MAX; i++) imageStr2[i] = imageStr[i];
+            IconicAdapter adapter = new IconicAdapter(imageStr2);
 
             return adapter;
         }
@@ -180,14 +183,95 @@ public class TumblrWallpaper extends ListActivity {
     public class IconicAdapter extends ArrayAdapter<Object> {
         String[] mItems;
         private final Bitmap[] mBitmap;
+        DownloadBitmapThread []threads;
 
         IconicAdapter(String[] items) {
             super(mContext, R.layout.row, items);
             mItems = items;
             mBitmap = new Bitmap[BUTTON_MAX];
 
+            threads = new DownloadBitmapThread[BUTTON_MAX];
             for (int i = 0; i < BUTTON_MAX; i++) {
-                mBitmap[i] = getBitmap(mItems[i], 0, 0);
+                threads[i] = new DownloadBitmapThread(mItems[i], i, 0);
+                threads[i].start();
+            }
+            int threadCount = 0;
+            while(threadCount < BUTTON_MAX) {
+                if (bitmapThread(threadCount)) threadCount++;
+            }
+            Log.v(TAG, "DownloadBitmap :all thread end");
+        }
+
+        public Boolean bitmapThread(int threadCount) {
+            if (threads[threadCount] != null) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+            return true;
+        }
+
+        public class DownloadBitmapThread extends Thread {
+            private final String mUrlStr;
+            private final int mCount;
+            private final int mSleepTime;
+
+            DownloadBitmapThread(String urlStr, int count, int sleepTime) {
+                mUrlStr = urlStr;
+                mCount = count;
+                mSleepTime = sleepTime;
+            }
+
+            public void run() {
+                try {
+                    URL url = new URL(mUrlStr);
+                    InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
+
+                    // 取得失敗時は少し待機してから再取得する
+                    Thread.sleep((SLEEP_TIME + mSleepTime) * mCount);
+                    mBitmap[mCount] = BitmapFactory.decodeStream(is);
+
+                    int dataSize = is.read();
+                    Log.v(TAG, mUrlStr + " : " + Integer.toString(dataSize) + " : " + mBitmap[mCount]);
+                    is.close();
+
+                    // 取得できなかった場合は再取得処理
+                    if (mBitmap[mCount] == null && mCount < 4) {
+                        int time = 0;
+                        // 読み込み漏らしサイズ量でsleep時間を増やす
+                        if (dataSize > 200) {
+                            time = SLEEP_TIME * 3;
+                        } else if (dataSize > 150) {
+                            time = SLEEP_TIME * 2;
+                        } else if (dataSize > 100) {
+                            time = SLEEP_TIME;
+                        }
+                        mBitmap[mCount] = getBitmap(mUrlStr, mCount+1, time);
+                    }
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    String newStr = "";
+                    if (Pattern.compile(".+_500\\..+").matcher(mUrlStr).matches()) {
+                        newStr = mUrlStr.replaceAll("_500.", "_400.");
+                    } else if (Pattern.compile(".+_400\\..+").matcher(mUrlStr).matches()) {
+                        newStr = mUrlStr.replaceAll("_400.", "_250.");
+                    } else if (Pattern.compile(".+_250\\..+").matcher(mUrlStr).matches()) {
+                        newStr = mUrlStr.replaceAll("_250.", "_100.");
+                    } else {
+                        // 【未実装】壁紙貼り付け失敗ダイアログ表示
+                        e.printStackTrace();
+                    }
+                    mBitmap[mCount] = getBitmap(newStr, mCount, 0);
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Log.v(TAG, mBitmap + ": thread end");
+                threads[mCount] = null;
             }
         }
 
@@ -230,7 +314,6 @@ public class TumblrWallpaper extends ListActivity {
     private Bitmap getBitmap(final String urlStr, int count, int sleepTime) {
         Bitmap bmp = null;
         try {
-            int DEFAULT_BUFFER_SIZE = 1024 * 100;
             URL url = new URL(urlStr);
             InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
 
