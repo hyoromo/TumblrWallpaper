@@ -48,12 +48,14 @@ public class TumblrWallpaper extends ListActivity {
     private static ProgressDialog mProgressDialog;
     private static Context mContext;
     private static Activity mActivity;
+    ListData []mListData;
 
     // private static Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.v(TAG, "onCreate");
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         // ログ収集開始
@@ -63,30 +65,42 @@ public class TumblrWallpaper extends ListActivity {
         // 初期設定
         mContext = getApplicationContext();
         mActivity = this;
-        setNameDialog().show();
+        mListData = new ListData[LIST_MAX];
+
+        // アカウント入力ダイアログ表示
+        setAccountNameDialog().show();
 
         // ログ収集終了
         // Debug.stopMethodTracing();
     }
 
     /**
-     * 取得URL設定ダイアログ
+     * アカウント入力ダイアログ表示
      */
-    private Dialog setNameDialog() {
+    private Dialog setAccountNameDialog() {
         LayoutInflater factory = LayoutInflater.from(this);
+        Log.v(TAG, "setNameDialog");
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
+
+        // アカウント名がプリファレンスにあればエディタに設定
         edit.setText(getPreferences("name", ""));
 
         return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
                 .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
+                        Log.v(TAG, "setNameDialog :tumblr url get start");
+                        // ロード中ダイアログ表示
                         String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
                         String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
                         showPrrogressDialog(mes1, mes2);
+
+                        // 非同期で画像取得
                         String editStr = edit.getText().toString();
                         String url = "http://" + editStr + ".tumblr.com/page/";
                         new ImageTask().execute(url);
+
+                        // アカウント名をプリファレンスに保存
                         setPreferences("name", editStr);
                     }
                 }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -114,7 +128,7 @@ public class TumblrWallpaper extends ListActivity {
         return settings.getString(keyname, key);
     }
 
-    /*
+    /**
      * Load時のプログレスダイアログ表示
      */
     private void showPrrogressDialog(String mes1, String mes2) {
@@ -127,12 +141,8 @@ public class TumblrWallpaper extends ListActivity {
     class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
         protected IconicAdapter doInBackground(String... params) {
-            // 画像URLを取得
-            String[] imageStr = getImage(params[0]);
-            String[] imageStr2 = new String[BUTTON_MAX];
-            for (int i = 0; i < BUTTON_MAX; i++) imageStr2[i] = imageStr[i];
-            IconicAdapter adapter = new IconicAdapter(imageStr2);
-
+            setListData(params[0], 1);
+            IconicAdapter adapter = new IconicAdapter();
             return adapter;
         }
 
@@ -140,30 +150,43 @@ public class TumblrWallpaper extends ListActivity {
         protected void onPostExecute(IconicAdapter adapter) {
             setListAdapter(adapter);
             mProgressDialog.dismiss();
+            Log.v(TAG, "setNameDialog :tumblr url get end");
         }
     }
 
     /**
-     * Tumblrから画像取得
+     * Tumblrからの情報を設定
      */
-    private String[] getImage(String tumblrUrl) {
+    private void setListData(String tumblrUrl, int page) {
+        Log.v(TAG, "getListData :all image get start");
         int count = 0;
-        int page = 1;
-        String[] imageStr = new String[LIST_MAX];
-        while (count < LIST_MAX) {
+        DownloadBitmapThread []threads = new DownloadBitmapThread[BUTTON_MAX];
+        while (count < BUTTON_MAX) {
             try {
                 URL url = new URL(tumblrUrl + Integer.toString(page++));
                 HttpURLConnection urlCon = (HttpURLConnection) url.openConnection();
                 Pattern p = Pattern
                         .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
                 urlCon.setRequestMethod("GET");
+
+                Log.d(TAG, "url get start");
                 BufferedReader urlIn = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+                Log.d(TAG, "url get end");
+
                 String str;
-                while ((str = urlIn.readLine()) != null && count < LIST_MAX) {
+                while ((str = urlIn.readLine()) != null && count < BUTTON_MAX) {
                     Matcher m = p.matcher(str);
                     if (m.find()) {
-                        imageStr[count] = m.group().replaceAll("_400.", "_250.");
-                        Log.d(TAG, imageStr[count]);
+                        // 画像URL取得
+                        mListData[count] = new ListData();
+                        mListData[count].position = count;
+                        mListData[count].url = m.group().replaceAll("_400.", "_250.");
+                        Log.d(TAG, mListData[count].url);
+
+                        // Bitmap情報を別スレッドで取得
+                        threads[count] = new DownloadBitmapThread(count, 0);
+                        threads[count].start();
+
                         count++;
                     }
                 }
@@ -174,141 +197,30 @@ public class TumblrWallpaper extends ListActivity {
                 e.printStackTrace();
             }
         }
-        return imageStr;
+        for (int threadCount = 0; threadCount < BUTTON_MAX; threadCount++) {
+            try {
+                threads[threadCount].join();
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        Log.v(TAG, "getListData :all image get end");
     }
 
-    /**
-     * ArrayAdapter を拡張したクラス。 画像を一覧表示させている。
-     */
-    public class IconicAdapter extends ArrayAdapter<Object> {
-        String[] mItems;
-        private final Bitmap[] mBitmap;
-        DownloadBitmapThread []threads;
+    public class DownloadBitmapThread extends Thread {
+        private final int mCount;
+        private final int mSleepTime;
 
-        IconicAdapter(String[] items) {
-            super(mContext, R.layout.row, items);
-            mItems = items;
-            mBitmap = new Bitmap[BUTTON_MAX];
-
-            threads = new DownloadBitmapThread[BUTTON_MAX];
-            for (int i = 0; i < BUTTON_MAX; i++) {
-                threads[i] = new DownloadBitmapThread(mItems[i], i, 0);
-                threads[i].start();
-            }
-            int threadCount = 0;
-            while(threadCount < BUTTON_MAX) {
-                if (bitmapThread(threadCount)) threadCount++;
-            }
-            Log.v(TAG, "DownloadBitmap :all thread end");
+        DownloadBitmapThread(int count, int sleepTime) {
+            mCount = count;
+            mSleepTime = sleepTime;
         }
 
-        public Boolean bitmapThread(int threadCount) {
-            if (threads[threadCount] != null) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                return false;
-            }
-            return true;
+        public void run() {
+            mListData[mCount].bitmap = getBitmap(mListData[mCount].url, mCount, mSleepTime);
+            Log.v(TAG, mListData[mCount].bitmap + ": thread end");
         }
-
-        public class DownloadBitmapThread extends Thread {
-            private final String mUrlStr;
-            private final int mCount;
-            private final int mSleepTime;
-
-            DownloadBitmapThread(String urlStr, int count, int sleepTime) {
-                mUrlStr = urlStr;
-                mCount = count;
-                mSleepTime = sleepTime;
-            }
-
-            public void run() {
-                try {
-                    URL url = new URL(mUrlStr);
-                    InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
-
-                    // 取得失敗時は少し待機してから再取得する
-                    Thread.sleep((SLEEP_TIME + mSleepTime) * mCount);
-                    mBitmap[mCount] = BitmapFactory.decodeStream(is);
-
-                    int dataSize = is.read();
-                    Log.v(TAG, mUrlStr + " : " + Integer.toString(dataSize) + " : " + mBitmap[mCount]);
-                    is.close();
-
-                    // 取得できなかった場合は再取得処理
-                    if (mBitmap[mCount] == null && mCount < 4) {
-                        int time = 0;
-                        // 読み込み漏らしサイズ量でsleep時間を増やす
-                        if (dataSize > 200) {
-                            time = SLEEP_TIME * 3;
-                        } else if (dataSize > 150) {
-                            time = SLEEP_TIME * 2;
-                        } else if (dataSize > 100) {
-                            time = SLEEP_TIME;
-                        }
-                        mBitmap[mCount] = getBitmap(mUrlStr, mCount+1, time);
-                    }
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    String newStr = "";
-                    if (Pattern.compile(".+_500\\..+").matcher(mUrlStr).matches()) {
-                        newStr = mUrlStr.replaceAll("_500.", "_400.");
-                    } else if (Pattern.compile(".+_400\\..+").matcher(mUrlStr).matches()) {
-                        newStr = mUrlStr.replaceAll("_400.", "_250.");
-                    } else if (Pattern.compile(".+_250\\..+").matcher(mUrlStr).matches()) {
-                        newStr = mUrlStr.replaceAll("_250.", "_100.");
-                    } else {
-                        // 【未実装】壁紙貼り付け失敗ダイアログ表示
-                        e.printStackTrace();
-                    }
-                    mBitmap[mCount] = getBitmap(newStr, mCount, 0);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                Log.v(TAG, mBitmap + ": thread end");
-                threads[mCount] = null;
-            }
-        }
-
-        /**
-         * 画面に表示される毎に呼び出される
-         */
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View row = convertView;
-            ViewHolder holder;
-
-            if (row == null) {
-                LayoutInflater inflater = LayoutInflater.from(mContext);
-                row = inflater.inflate(R.layout.row, null);
-                holder = new ViewHolder();
-
-                // 画像イメージを作成
-                holder.img = (ImageView) row.findViewById(R.id.image);
-
-                row.setTag(holder);
-            } else {
-                holder = (ViewHolder) row.getTag();
-            }
-
-            holder.img.setImageBitmap(mBitmap[position]);
-            holder.img.setTag(mItems[position]);
-
-            return row;
-        }
-
-        /*
-         * 10件目以降は非同期で取得してくる予定 // 画像をダウンロードして表示する private void downloadAndUpdateImage(int position, ImageButton v) {
-         * DownloadTask task = new DownloadTask(v, mHandler); task.execute(mItems[position]); }
-         */
-    }
-
-    static class ViewHolder {
-        ImageView img;
     }
 
     private Bitmap getBitmap(final String urlStr, int count, int sleepTime) {
@@ -362,6 +274,51 @@ public class TumblrWallpaper extends ListActivity {
     }
 
     /**
+     * ArrayAdapter を拡張したクラス。 画像を一覧表示させている。
+     */
+    public class IconicAdapter extends ArrayAdapter<Object> {
+
+        IconicAdapter() {
+            super(mContext, R.layout.row, mListData);
+        }
+
+        /**
+         * 画面に表示される毎に呼び出される
+         */
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View row = convertView;
+            ViewHolder holder;
+
+            if (row == null) {
+                LayoutInflater inflater = LayoutInflater.from(mContext);
+                row = inflater.inflate(R.layout.row, null);
+                holder = new ViewHolder();
+
+                // 画像イメージを作成
+                holder.img = (ImageView) row.findViewById(R.id.image);
+
+                row.setTag(holder);
+            } else {
+                holder = (ViewHolder) row.getTag();
+            }
+
+            holder.img.setImageBitmap(mListData[position].bitmap);
+            holder.img.setTag(mListData[position].url);
+
+            return row;
+        }
+
+        /*
+         * 10件目以降は非同期で取得してくる予定 // 画像をダウンロードして表示する private void downloadAndUpdateImage(int position, ImageButton v) {
+         * DownloadTask task = new DownloadTask(v, mHandler); task.execute(mItems[position]); }
+         */
+    }
+
+    static class ViewHolder {
+        ImageView img;
+    }
+
+    /**
      * Listがクリックされたら選択画像を壁紙設定する
      */
     public void onListItemClick(ListView parent, View v, int position, long id) {
@@ -404,6 +361,7 @@ public class TumblrWallpaper extends ListActivity {
         super.onDestroy();
         Log.v(TAG, "onDestroy");
 
+        mListData = null;
         mActivity = null;
         mContext = null;
         mProgressDialog = null;
