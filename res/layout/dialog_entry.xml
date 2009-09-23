@@ -23,4 +23,15 @@
         android:capitalize="none"
         android:gravity="fill_horizontal"
         android:textAppearance="?android:attr/textAppearanceMedium" />
+    <CheckBox
+        android:id="@+id/reaccount_use"
+        android:text="@string/reaccount_use_text"
+        android:checked="true"
+        android:layout_height="wrap_content"
+        android:layout_width="fill_parent"
+        android:scrollHorizontally="true"
+        android:autoText="false"
+        android:capitalize="none"
+        android:gravity="center_vertical"
+        android:textAppearance="?android:attr/textAppearanceMedium"/>
 </LinearLayout>

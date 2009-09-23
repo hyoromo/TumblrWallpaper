@@ -25,10 +25,14 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -64,9 +68,16 @@ public class TumblrWallpaper extends ListActivity {
         // 初期設定
         mContext = getApplicationContext();
         mActivity = this;
-        mListData = new ListData[LIST_MAX];
 
-        showAccountNameDialog().show();
+        // アカウント名入力ダイアログをスキップするフラグが立っていないか。
+        String reloadCheck = String.valueOf(getPreferences("reload", "false"));
+        if ("false".equals(reloadCheck)) {
+            showAccountNameDialog().show();
+        } else {
+            String accountName = getPreferences("name", "");
+            loadThreadStart(accountName, reloadCheck);
+
+        }
     }
 
     /**
@@ -76,27 +87,21 @@ public class TumblrWallpaper extends ListActivity {
         LayoutInflater factory = LayoutInflater.from(this);
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
+        final CheckBox check = (CheckBox) entryView.findViewById(R.id.reaccount_use);
 
         // アカウント名がプリファレンスにあればエディタに設定
         edit.setText(getPreferences("name", ""));
+        check.setChecked(Boolean.valueOf(getPreferences("reload", "true")));
 
         return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
-                .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                .setView(entryView).setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        // ロード中ダイアログ表示
-                        String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
-                        String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
-                        showPrrogressDialog(mes1, mes2);
-
                         // 非同期で画像取得
-                        String editStr = edit.getText().toString();
-                        String url = "http://" + editStr + ".tumblr.com/page/";
-                        new ImageTask().execute(url);
-
-                        // アカウント名をプリファレンスに保存
-                        setPreferences("name", editStr);
+                        String accountName = edit.getText().toString();
+                        String reloadCheck = String.valueOf(check.isChecked());
+                        loadThreadStart(accountName, reloadCheck);
                     }
-                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                }).setNegativeButton(R.string.load_alert_name_dialog_button2, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         finish();
                     }
@@ -122,6 +127,31 @@ public class TumblrWallpaper extends ListActivity {
     }
 
     /**
+     * Load時のスレッド開始処理
+     */
+    private void loadThreadStart(String accountName, String reloadCheck) {
+        // ロード中ダイアログ表示
+        String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
+        String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
+        showPrrogressDialog(mes1, mes2);
+
+        // 非同期で画像取得
+        String url = "http://" + accountName + ".tumblr.com/page/";
+        new ImageTask().execute(url);
+
+        setAccountInfo(accountName, reloadCheck);
+    }
+
+    /**
+     * アカウント情報をプリファレンスに保存
+     */
+    private void setAccountInfo(String accountName, String reloadCheck) {
+        // アカウント情報をプリファレンスに保存
+        setPreferences("name", accountName);
+        setPreferences("reload", reloadCheck);
+    }
+
+    /**
      * Load時のプログレスダイアログ表示
      */
     private void showPrrogressDialog(String mes1, String mes2) {
@@ -134,6 +164,7 @@ public class TumblrWallpaper extends ListActivity {
     class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
         protected IconicAdapter doInBackground(String... params) {
+            mListData = new ListData[LIST_MAX];
             IconicAdapter adapter = null;
             try {
                 setListData(params[0], 1);
@@ -198,6 +229,11 @@ public class TumblrWallpaper extends ListActivity {
             }
         }
 
+        // 一件も画像を取得できなかった場合はエラー
+        if (mBitmapThreads[0] == null) {
+            throw new RuntimeException();
+        }
+
         // Bitmap取得スレッドが全て終わるまで待機
         for (int threadCount = 0; threadCount < BUTTON_MAX; threadCount++) {
             if (mBitmapThreads[threadCount] != null) {
@@ -219,7 +255,7 @@ public class TumblrWallpaper extends ListActivity {
         .setIcon(R.drawable.alert_dialog_icon)
         .setTitle(titleId)
         .setMessage(mesId)
-        .setPositiveButton("了解", new DialogInterface.OnClickListener() {
+        .setPositiveButton(R.string.err_alert_dialog_button, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 showAccountNameDialog().show();
             }
@@ -342,36 +378,119 @@ public class TumblrWallpaper extends ListActivity {
      * Listがクリックされたら選択画像を壁紙設定する
      */
     public void onListItemClick(ListView parent, View v, int position, long id) {
-        // 端末の幅と高さ
-        final int hw = getWallpaperDesiredMinimumWidth();
-        final int hh = getWallpaperDesiredMinimumHeight();
+        // 選択ダイアログが空の場合
+        if (mListData[position] == null) {
+            showNullRowSelDialog().show();
+        } else {
+            // 端末の幅と高さ
+            final int hw = getWallpaperDesiredMinimumWidth();
+            final int hh = getWallpaperDesiredMinimumHeight();
 
-        // 画像を取得してスケール
-        final String str = mListData[position].url.replaceAll("_250.", "_500.");
+            // 画像を取得してスケール
+            final String str = mListData[position].url.replaceAll("_250.", "_500.");
 
-        String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
-        String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
-        showPrrogressDialog(mes1, mes2);
+            String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
+            String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
+            showPrrogressDialog(mes1, mes2);
 
-        // 壁紙設定
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
-                    if (bmp != null) {
-                        setWallpaper(bmp);
-                    } else {
-                        // Bitmap取得に失敗したときはデフォルト壁紙を設定
-                        clearWallpaper();
+            // 壁紙設定
+            new Thread(new Runnable() {
+                public void run() {
+                    try {
+                        final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
+                        if (bmp != null) {
+                            setWallpaper(bmp);
+                        } else {
+                            // Bitmap取得に失敗したときはデフォルト壁紙を設定
+                            clearWallpaper();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    mProgressDialog.dismiss();
+                    // 壁紙設定後に Activity を終了させる。
+                    finish();
                 }
-                mProgressDialog.dismiss();
-                // 壁紙設定後に Activity を終了させる。
-                finish();
+            }).start();
+        }
+    }
+
+    /**
+     * 空リスト選択ダイアログを表示
+     */
+    public AlertDialog showNullRowSelDialog() {
+        return new AlertDialog.Builder(this)
+        .setIcon(R.drawable.alert_dialog_icon)
+        .setTitle(R.string.null_row_sel_dialog_title)
+        .setMessage(R.string.null_row_sel_dialog_mes)
+        .setPositiveButton(R.string.err_alert_dialog_button, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
             }
-        }).start();
+        })
+        .create();
+    }
+
+    /**
+     * menuボタン作成
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    /**
+     * meny押下時のイベント
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem items) {
+        switch (items.getItemId()) {
+        case R.id.menu_reload_setting:
+            showReloadSettingDialog().show();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * アカウント入力ダイアログ表示
+     */
+    private Dialog showReloadSettingDialog() {
+        LayoutInflater factory = LayoutInflater.from(this);
+        final View entryView = factory.inflate(R.layout.dialog_entry, null);
+        final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
+        final CheckBox check = (CheckBox) entryView.findViewById(R.id.reaccount_use);
+
+        // アカウント名がプリファレンスにあればエディタに設定
+        edit.setText(getPreferences("name", ""));
+        check.setChecked(Boolean.valueOf(getPreferences("reload", "true")));
+
+        return new AlertDialog.Builder(this)
+                .setIcon(R.drawable.icon)
+                .setTitle(R.string.load_alert_name_dialog_title)
+                .setView(entryView)
+                .setPositiveButton(R.string.reload_setting_dialog_button1, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        String accountName = edit.getText().toString();
+                        String reloadCheck = String.valueOf(check.isChecked());
+                        loadThreadStart(accountName, reloadCheck);
+                    }
+                })
+                .setNeutralButton(R.string.reload_setting_dialog_button2, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        String accountName = edit.getText().toString();
+                        String reloadCheck = String.valueOf(check.isChecked());
+                        setAccountInfo(accountName, reloadCheck);
+                    }
+                })
+                .setNegativeButton(R.string.reload_setting_dialog_button3, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        // 処理なし
+                    }
+                })
+                .create();
     }
 
     @Override

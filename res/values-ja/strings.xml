@@ -4,6 +4,8 @@
     <string name="wallpaperChangerButton_name">WallpaperCanger</string>
     <string name="load_alert_name_dialog_name">アカウント名</string>
     <string name="load_alert_name_dialog_title">Tumblrのアカウント名\nを入力してください。</string>
+    <string name="load_alert_name_dialog_button1">読込</string>
+    <string name="load_alert_name_dialog_button2">終了</string>
     <string name="load_progress_dialog_mes1">起動中</string>
     <string name="load_progress_dialog_mes2">画像を取得中です。\nしばらくお待ちください...</string>
     <string name="wallpaper_progress_dialog_mes1">壁紙設定中</string>
@@ -12,4 +14,12 @@
     <string name="err1_alert_dialog_mes">指定URLが存在しません。</string>
     <string name="err2_alert_dialog_title">画像取得失敗</string>
     <string name="err2_alert_dialog_mes">指定URLで画像の取得件数が10件未満でした。</string>
+    <string name="err_alert_dialog_button">了解</string>
+    <string name="null_row_sel_dialog_title">空項目が選択されました</string>
+    <string name="null_row_sel_dialog_mes">画像が表示されている項目を\n選択し直してください。</string>
+    <string name="menu_reload_setting">再読込/再設定</string>
+    <string name="reaccount_use_text">次回から自動読み込み</string>
+    <string name="reload_setting_dialog_button1">設定\n再読込</string>
+    <string name="reload_setting_dialog_button2">設定</string>
+    <string name="reload_setting_dialog_button3">中止</string>
 </resources>
