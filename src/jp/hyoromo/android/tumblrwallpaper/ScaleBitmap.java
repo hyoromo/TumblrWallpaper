@@ -36,7 +36,6 @@ public class ScaleBitmap {
         // 画像の幅と高さ
         int bmpWidth = bmp.getWidth();
         int bmpHeight = bmp.getHeight();
-        Log.d(TAG, "bmpX:" + bmpWidth + "/bmpY:" + bmpHeight);
 
         changeY = height - bmpHeight;
         BigDecimal scale = new BigDecimal("0");
@@ -45,7 +44,6 @@ public class ScaleBitmap {
 
         point.x = scale.multiply(new BigDecimal(Integer.toString(bmpWidth))).intValue();
         point.y = scale.multiply(new BigDecimal(Integer.toString(bmpHeight))).intValue();
-        Log.d(TAG, "scaleX:" + point.x + "/scaleY:" + point.y);
 
         return point;
     }
@@ -57,7 +55,6 @@ public class ScaleBitmap {
         BigDecimal afterSize = new BigDecimal(bmpSize + changeSize);
         BigDecimal scale = afterSize.divide(new BigDecimal(Integer.toString(bmpSize)), 4,
                 BigDecimal.ROUND_CEILING);
-        Log.d(TAG, "scale:" + scale);
 
         return scale;
     }

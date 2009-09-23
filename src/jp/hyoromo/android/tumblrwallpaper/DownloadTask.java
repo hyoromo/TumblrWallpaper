@@ -40,7 +40,6 @@ public class DownloadTask extends AsyncTask<String, Integer, Drawable> {
                 }
             });
             is.close();
-            // return draw;
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {

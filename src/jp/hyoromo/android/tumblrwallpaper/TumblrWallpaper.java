@@ -59,10 +59,6 @@ public class TumblrWallpaper extends ListActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        Log.v(TAG, "onCreate");
-
-        // ログ収集開始
-        // Debug.startMethodTracing();
         setContentView(R.layout.main);
 
         // 初期設定
@@ -71,9 +67,6 @@ public class TumblrWallpaper extends ListActivity {
         mListData = new ListData[LIST_MAX];
 
         showAccountNameDialog().show();
-
-        // ログ収集終了
-        // Debug.stopMethodTracing();
     }
 
     /**
@@ -81,7 +74,6 @@ public class TumblrWallpaper extends ListActivity {
      */
     private Dialog showAccountNameDialog() {
         LayoutInflater factory = LayoutInflater.from(this);
-        Log.v(TAG, "setNameDialog");
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
 
@@ -91,7 +83,6 @@ public class TumblrWallpaper extends ListActivity {
         return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
                 .setView(entryView).setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        Log.v(TAG, "setNameDialog :tumblr url get start");
                         // ロード中ダイアログ表示
                         String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
                         String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
@@ -165,8 +156,6 @@ public class TumblrWallpaper extends ListActivity {
             } else {
                 showAlertDialog().show();
             }
-
-            Log.v(TAG, "setNameDialog :tumblr url get end");
         }
     }
 
@@ -174,7 +163,6 @@ public class TumblrWallpaper extends ListActivity {
      * Tumblrからの情報を設定
      */
     private void setListData(String tumblrUrl, int page) throws IOException, RuntimeException {
-        Log.v(TAG, "getListData :all image get start");
         int count = 0;
         DownloadBitmapThread []mBitmapThreads = new DownloadBitmapThread[BUTTON_MAX];
         while (count < BUTTON_MAX && page < PAGE_MAX) {
@@ -184,10 +172,7 @@ public class TumblrWallpaper extends ListActivity {
                 Pattern p = Pattern
                         .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
                 urlCon.setRequestMethod("GET");
-
-                Log.d(TAG, "url get start");
                 BufferedReader urlIn = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
-                Log.d(TAG, "url get end");
 
                 String str;
                 while ((str = urlIn.readLine()) != null && count < BUTTON_MAX) {
@@ -197,7 +182,6 @@ public class TumblrWallpaper extends ListActivity {
                         mListData[count] = new ListData();
                         mListData[count].position = count;
                         mListData[count].url = m.group().replaceAll("_400.", "_250.");
-                        Log.d(TAG, mListData[count].url);
 
                         // Bitmap情報を別スレッドで取得
                         mBitmapThreads[count] = new DownloadBitmapThread(count, 0);
@@ -222,7 +206,6 @@ public class TumblrWallpaper extends ListActivity {
                 mBitmapThreads[threadCount] = null;
             }
         }
-        Log.v(TAG, "getListData :all image get end");
     }
 
     /**
@@ -252,7 +235,6 @@ public class TumblrWallpaper extends ListActivity {
 
         public void run() {
             mListData[mCount].bitmap = getBitmap(mListData[mCount].url, mCount, mSleepTime);
-            Log.v(TAG, mListData[mCount].bitmap + ": thread end");
         }
     }
 
@@ -267,7 +249,6 @@ public class TumblrWallpaper extends ListActivity {
             bmp = BitmapFactory.decodeStream(is);
 
             int dataSize = is.read();
-            Log.v(TAG, urlStr + " : " + Integer.toString(dataSize) + " : " + bmp);
             is.close();
 
             // 取得できなかった場合は再取得処理
@@ -361,7 +342,6 @@ public class TumblrWallpaper extends ListActivity {
         // 端末の幅と高さ
         final int hw = getWallpaperDesiredMinimumWidth();
         final int hh = getWallpaperDesiredMinimumHeight();
-        Log.d(TAG, "bmpX:" + hw + "/bmpY:" + hh);
 
         // 画像を取得してスケール
         final String str = mListData[position].url.replaceAll("_250.", "_500.");
@@ -394,7 +374,6 @@ public class TumblrWallpaper extends ListActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.v(TAG, "onDestroy");
 
         mListData = null;
         mActivity = null;
