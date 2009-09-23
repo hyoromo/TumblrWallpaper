@@ -181,7 +181,10 @@ public class TumblrWallpaper extends ListActivity {
                         // 画像URL取得
                         mListData[count] = new ListData();
                         mListData[count].position = count;
-                        mListData[count].url = m.group().replaceAll("_400.", "_250.");
+                        String urlStr = "";
+                        urlStr = m.group().replaceAll("_500.", "_250.");
+                        urlStr = m.group().replaceAll("_400.", "_250.");
+                        mListData[count].url = urlStr;
 
                         // Bitmap情報を別スレッドで取得
                         mBitmapThreads[count] = new DownloadBitmapThread(count, 0);
