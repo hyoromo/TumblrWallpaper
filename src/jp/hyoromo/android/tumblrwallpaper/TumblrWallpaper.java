@@ -19,6 +19,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
@@ -48,15 +49,15 @@ public class TumblrWallpaper extends ListActivity {
     private static ProgressDialog mProgressDialog;
     private static Context mContext;
     private static Activity mActivity;
-    ListData []mListData;
+    private static ListData []mListData;
 
     // private static Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.v(TAG, "onCreate");
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+        Log.v(TAG, "onCreate");
 
         // ログ収集開始
         // Debug.startMethodTracing();
@@ -67,7 +68,6 @@ public class TumblrWallpaper extends ListActivity {
         mActivity = this;
         mListData = new ListData[LIST_MAX];
 
-        // アカウント入力ダイアログ表示
         setAccountNameDialog().show();
 
         // ログ収集終了
@@ -160,7 +160,7 @@ public class TumblrWallpaper extends ListActivity {
     private void setListData(String tumblrUrl, int page) {
         Log.v(TAG, "getListData :all image get start");
         int count = 0;
-        DownloadBitmapThread []threads = new DownloadBitmapThread[BUTTON_MAX];
+        DownloadBitmapThread []mBitmapThreads = new DownloadBitmapThread[BUTTON_MAX];
         while (count < BUTTON_MAX) {
             try {
                 URL url = new URL(tumblrUrl + Integer.toString(page++));
@@ -184,8 +184,8 @@ public class TumblrWallpaper extends ListActivity {
                         Log.d(TAG, mListData[count].url);
 
                         // Bitmap情報を別スレッドで取得
-                        threads[count] = new DownloadBitmapThread(count, 0);
-                        threads[count].start();
+                        mBitmapThreads[count] = new DownloadBitmapThread(count, 0);
+                        mBitmapThreads[count].start();
 
                         count++;
                     }
@@ -199,11 +199,12 @@ public class TumblrWallpaper extends ListActivity {
         }
         for (int threadCount = 0; threadCount < BUTTON_MAX; threadCount++) {
             try {
-                threads[threadCount].join();
+                mBitmapThreads[threadCount].join();
             } catch (InterruptedException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+            mBitmapThreads[threadCount] = null;
         }
         Log.v(TAG, "getListData :all image get end");
     }
@@ -354,6 +355,14 @@ public class TumblrWallpaper extends ListActivity {
                 finish();
             }
         }).start();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        Log.v(TAG, "onConfigurationChanged");
+//        if (mTask != null) {
+            super.onConfigurationChanged(newConfig);
+//        }
     }
 
     @Override
