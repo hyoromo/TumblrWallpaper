@@ -8,4 +8,8 @@
     <string name="load_progress_dialog_mes2">画像を取得中です。\nしばらくお待ちください...</string>
     <string name="wallpaper_progress_dialog_mes1">壁紙設定中</string>
     <string name="wallpaper_progress_dialog_mes2">壁紙を設定中です。\nしばらくお待ちください...</string>
+    <string name="err1_alert_dialog_title">画像取得失敗</string>
+    <string name="err1_alert_dialog_mes">指定URLが存在しません。</string>
+    <string name="err2_alert_dialog_title">画像取得失敗</string>
+    <string name="err2_alert_dialog_mes">指定URLで画像の取得件数が10件未満でした。</string>
 </resources>

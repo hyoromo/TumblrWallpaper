@@ -19,8 +19,10 @@ public class ScaleBitmap {
      * スケールビットマップを取得します
      */
     public static Bitmap getScaleBitmap(Bitmap bmp, int width, int height) {
-        Point point = saleSize(bmp, width, height);
-        bmp = Bitmap.createScaledBitmap(bmp, point.x, point.y, true);
+        if (bmp != null) {
+            Point point = saleSize(bmp, width, height);
+            bmp = Bitmap.createScaledBitmap(bmp, point.x, point.y, true);
+        }
         return bmp;
     }
 
@@ -29,7 +31,6 @@ public class ScaleBitmap {
      */
     private static Point saleSize(Bitmap bmp, int width, int height) {
         Point point = new Point(0, 0);
-        int changeX = 0;
         int changeY = 0;
 
         // 画像の幅と高さ
@@ -37,23 +38,11 @@ public class ScaleBitmap {
         int bmpHeight = bmp.getHeight();
         Log.d(TAG, "bmpX:" + bmpWidth + "/bmpY:" + bmpHeight);
 
-        changeX = width - bmpWidth;
         changeY = height - bmpHeight;
         BigDecimal scale = new BigDecimal("0");
         // 差がマイナスであることを最優先に確認します
-        if (changeX < 0 || changeY < 0) {
-            if (changeX < changeY) {
-                scale = scaleData(bmpWidth, changeX);
-            } else {
-                scale = scaleData(bmpHeight, changeY);
-            }
-        } else {
-            if (changeX < changeY) {
-                scale = scaleData(bmpWidth, changeX);
-            } else {
-                scale = scaleData(bmpHeight, changeY);
-            }
-        }
+        scale = scaleData(bmpHeight, changeY);
+
         point.x = scale.multiply(new BigDecimal(Integer.toString(bmpWidth))).intValue();
         point.y = scale.multiply(new BigDecimal(Integer.toString(bmpHeight))).intValue();
         Log.d(TAG, "scaleX:" + point.x + "/scaleY:" + point.y);

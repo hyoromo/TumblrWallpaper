@@ -8,4 +8,8 @@
     <string name="load_progress_dialog_mes2">The image is being acquired.\nPlease wait for a while...</string>
     <string name="wallpaper_progress_dialog_mes1">Wallpapering</string>
     <string name="wallpaper_progress_dialog_mes2">The wallpaper is being set.\nPlease wait for a while...</string>
+    <string name="err1_alert_dialog_title">Image acquisition failure</string>
+    <string name="err1_alert_dialog_mes">Specification URL doesn't exist.</string>
+    <string name="err2_alert_dialog_title">Image acquisition failure</string>
+    <string name="err2_alert_dialog_mes">The acquisition number of images was less than ten in specification URL.</string>
 </resources>
