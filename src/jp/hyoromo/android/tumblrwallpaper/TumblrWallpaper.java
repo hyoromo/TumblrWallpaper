@@ -20,7 +20,6 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -51,6 +50,8 @@ public class TumblrWallpaper extends ListActivity {
     private static Context mContext;
     private static Activity mActivity;
     private static ListData []mListData;
+    private static Thread mBitmapScaleThread;
+    private static Bitmap mWallpaperBitmap;
     int titleId;
     int mesId;
 
@@ -163,7 +164,6 @@ public class TumblrWallpaper extends ListActivity {
      * @param reloadCheck : 「次回から自動読み込み」フラグ
      */
     private void loadThreadStart(String accountName, String reloadCheck) {
-        Log.v(TAG, "program start!");
         // ロード中はダイアログ表示
         String title = getResources().getString(R.string.load_progress_dialog_mes1);
         String mes = getResources().getString(R.string.load_progress_dialog_mes2);
@@ -227,7 +227,6 @@ public class TumblrWallpaper extends ListActivity {
             else {
                 showAlertDialog().show();
             }
-            Log.v(TAG, "program end!");
         }
     }
 
@@ -388,44 +387,77 @@ public class TumblrWallpaper extends ListActivity {
      * @param position : 選択されたListの上から数えたときの番号
      * @param id : 知らん
      */
-    public void onListItemClick(ListView parent, View v, int position, long id) {
+    public void onListItemClick(ListView parent, View v, final int position, long id) {
         // 選択ダイアログが空の場合
         if (mListData[position] == null) {
             showNullRowSelDialog().show();
         } else {
-            // 端末の幅と高さ
-            final int hw = getWallpaperDesiredMinimumWidth();
-            final int hh = getWallpaperDesiredMinimumHeight();
-
-            // 画像を取得してスケール
-            final String str = mListData[position].url.replaceAll("_250.", "_500.");
-
-            String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
-            String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
-            showPrrogressDialog(mes1, mes2);
-
-            // 壁紙設定
-            new Thread(new Runnable() {
+            mBitmapScaleThread = new Thread(new Runnable() {
                 public void run() {
-                    try {
-                        final Bitmap bmp = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0), hw, hh);
-                        if (bmp != null) {
-                            setWallpaper(bmp);
-                        } else {
-                            // Bitmap取得に失敗したときはデフォルト壁紙を設定
-                            clearWallpaper();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    mProgressDialog.dismiss();
-                    // 壁紙設定後に Activity を終了させる。
-                    finish();
+                    // 端末の幅と高さ
+                    int hw = getWallpaperDesiredMinimumWidth();
+                    int hh = getWallpaperDesiredMinimumHeight();
+
+                    // 画像を取得してスケール
+                    String str = mListData[position].url.replaceAll("_250.", "_500.");
+                    mWallpaperBitmap = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0), hw, hh);
                 }
-            }).start();
+            });
+            mBitmapScaleThread.start();
+
+            showCheckWallpaperDialog().show();
         }
     }
 
+    public AlertDialog showCheckWallpaperDialog() {
+        return new AlertDialog.Builder(mActivity)
+        .setIcon(R.drawable.icon)
+        .setTitle(R.string.check_wallpaper_dialog_title)
+        .setMessage(R.string.check_wallpaper_dialog_mes)
+        .setPositiveButton(R.string.check_wallpaper_dialog_button1, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
+                String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
+                showPrrogressDialog(mes1, mes2);
+
+                // 壁紙設定
+                setWallpaper();
+            }
+        })
+        .setNegativeButton(R.string.check_wallpaper_dialog_button2, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+            }
+        })
+        .create();
+    }
+
+    /**
+     * 壁紙設定
+     */
+    public void setWallpaper() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    mBitmapScaleThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    if (mWallpaperBitmap != null) {
+                        setWallpaper(mWallpaperBitmap);
+                    } else {
+                        // Bitmap取得に失敗したときはデフォルト壁紙を設定
+                        clearWallpaper();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mProgressDialog.dismiss();
+                // 壁紙設定後に Activity を終了させる。
+                finish();
+            }
+        }).start();
+    }
     /**
      * 空リスト選択ダイアログを表示
      * @return
@@ -536,6 +568,8 @@ public class TumblrWallpaper extends ListActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+        mWallpaperBitmap = null;
+        mBitmapScaleThread = null;
         mListData = null;
         mActivity = null;
         mContext = null;
