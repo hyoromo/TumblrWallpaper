@@ -24,10 +24,12 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -51,6 +53,7 @@ public class TumblrWallpaper extends ListActivity {
     private static final int SLEEP_TIME = 250;
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 100;
     private static ProgressDialog mProgressDialog;
+    private static Dialog mDialog;
     private static Context mContext;
     private static Activity mActivity;
     private static ListData []mListData;
@@ -62,7 +65,7 @@ public class TumblrWallpaper extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.main);
 
         // 初期設定
@@ -72,7 +75,8 @@ public class TumblrWallpaper extends ListActivity {
         // アカウント名入力ダイアログをスキップするフラグが立っていないか。
         String reloadCheck = String.valueOf(getPreferences("reload", "false"));
         if ("false".equals(reloadCheck)) {
-            showAccountNameDialog().show();
+            mDialog = showAccountNameDialog();
+            mDialog.show();
         } else {
             String accountName = getPreferences("name", "");
             loadThreadStart(accountName, reloadCheck);
@@ -84,7 +88,7 @@ public class TumblrWallpaper extends ListActivity {
      * アカウント入力ダイアログ表示
      */
     private Dialog showAccountNameDialog() {
-        LayoutInflater factory = LayoutInflater.from(this);
+        LayoutInflater factory = LayoutInflater.from(mContext);
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
         final CheckBox check = (CheckBox) entryView.findViewById(R.id.reaccount_use);
@@ -93,7 +97,32 @@ public class TumblrWallpaper extends ListActivity {
         edit.setText(getPreferences("name", ""));
         check.setChecked(Boolean.valueOf(getPreferences("reload", "true")));
 
-        return new AlertDialog.Builder(this).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
+        // キーハンドリング
+        edit.setOnKeyListener(new View.OnKeyListener(){
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                 // Enterキーハンドリング
+                if (KeyEvent.KEYCODE_ENTER == keyCode) {
+                    // 押したときに改行を挿入防止処理
+                    if (KeyEvent.ACTION_DOWN == event.getAction()) {
+                        return true;
+                    }
+                     // 離したときにダイアログ上の[読込]処理を実行
+                    else if (KeyEvent.ACTION_UP == event.getAction()) {
+                        if (edit != null && edit.length() != 0) {
+                            // 非同期で画像取得
+                            String accountName = edit.getText().toString();
+                            String reloadCheck = String.valueOf(check.isChecked());
+                            loadThreadStart(accountName, reloadCheck);
+                            mDialog.dismiss();
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+
+        return new AlertDialog.Builder(mActivity).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
                 .setView(entryView).setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         // 非同期で画像取得
@@ -251,13 +280,14 @@ public class TumblrWallpaper extends ListActivity {
      * 警告ダイアログを表示
      */
     public AlertDialog showAlertDialog() {
-        return new AlertDialog.Builder(this)
+        return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.alert_dialog_icon)
         .setTitle(titleId)
         .setMessage(mesId)
         .setPositiveButton(R.string.err_alert_dialog_button, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                showAccountNameDialog().show();
+                mDialog = showAccountNameDialog();
+                mDialog.show();
             }
         })
         .create();
@@ -419,7 +449,7 @@ public class TumblrWallpaper extends ListActivity {
      * 空リスト選択ダイアログを表示
      */
     public AlertDialog showNullRowSelDialog() {
-        return new AlertDialog.Builder(this)
+        return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.alert_dialog_icon)
         .setTitle(R.string.null_row_sel_dialog_title)
         .setMessage(R.string.null_row_sel_dialog_mes)
@@ -448,7 +478,8 @@ public class TumblrWallpaper extends ListActivity {
     public boolean onOptionsItemSelected(MenuItem items) {
         switch (items.getItemId()) {
         case R.id.menu_reload_setting:
-            showReloadSettingDialog().show();
+            mDialog = showReloadSettingDialog();
+            mDialog.show();
             return true;
         }
         return false;
@@ -458,7 +489,7 @@ public class TumblrWallpaper extends ListActivity {
      * アカウント入力ダイアログ表示
      */
     private Dialog showReloadSettingDialog() {
-        LayoutInflater factory = LayoutInflater.from(this);
+        LayoutInflater factory = LayoutInflater.from(mContext);
         final View entryView = factory.inflate(R.layout.dialog_entry, null);
         final EditText edit = (EditText) entryView.findViewById(R.id.username_edit);
         final CheckBox check = (CheckBox) entryView.findViewById(R.id.reaccount_use);
@@ -467,7 +498,31 @@ public class TumblrWallpaper extends ListActivity {
         edit.setText(getPreferences("name", ""));
         check.setChecked(Boolean.valueOf(getPreferences("reload", "true")));
 
-        return new AlertDialog.Builder(this)
+        // キーハンドリング
+        edit.setOnKeyListener(new View.OnKeyListener(){
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                 // Enterキーハンドリング
+                if (KeyEvent.KEYCODE_ENTER == keyCode) {
+                    // 押したときに改行を挿入防止処理
+                    if (KeyEvent.ACTION_DOWN == event.getAction()) {
+                        return true;
+                    }
+                     // 離したときにダイアログ上の[再読込/再設定]処理を実行
+                    else if (KeyEvent.ACTION_UP == event.getAction()) {
+                        if (edit != null && edit.length() != 0) {
+                            mDialog.dismiss();
+                            String accountName = edit.getText().toString();
+                            String reloadCheck = String.valueOf(check.isChecked());
+                            loadThreadStart(accountName, reloadCheck);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+
+        return new AlertDialog.Builder(mActivity)
                 .setIcon(R.drawable.icon)
                 .setTitle(R.string.load_alert_name_dialog_title)
                 .setView(entryView)
@@ -500,6 +555,7 @@ public class TumblrWallpaper extends ListActivity {
         mListData = null;
         mActivity = null;
         mContext = null;
+        mDialog = null;
         mProgressDialog = null;
     }
 }
