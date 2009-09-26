@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TumblrWallpaper</string>
+    <string name="title_load">TumblrWallpaper</string>
     <string name="wallpaperChangerButton_name">WallpaperCanger</string>
     <string name="load_alert_name_dialog_name">Account Name</string>
     <string name="load_alert_name_dialog_title">Please input the account name of Tumblr.</string>

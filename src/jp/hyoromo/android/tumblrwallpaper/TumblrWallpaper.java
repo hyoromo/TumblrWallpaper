@@ -1,9 +1,7 @@
 package jp.hyoromo.android.tumblrwallpaper;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -20,7 +18,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,7 +26,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -50,8 +46,6 @@ public class TumblrWallpaper extends ListActivity {
     private static final int BUTTON_MAX = 10;
     private static final int LIST_MAX = 10;
     private static final int PAGE_MAX = 5;
-    private static final int SLEEP_TIME = 250;
-    private static final int DEFAULT_BUFFER_SIZE = 1024 * 100;
     private static ProgressDialog mProgressDialog;
     private static Dialog mDialog;
     private static Context mContext;
@@ -65,27 +59,29 @@ public class TumblrWallpaper extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.main);
 
         // 初期設定
         mContext = getApplicationContext();
         mActivity = this;
 
-        // アカウント名入力ダイアログをスキップするフラグが立っていないか。
         String reloadCheck = String.valueOf(getPreferences("reload", "false"));
+        // 初期ダイアログ表示
         if ("false".equals(reloadCheck)) {
             mDialog = showAccountNameDialog();
             mDialog.show();
-        } else {
+        }
+        // 初期ダイアログをスキップ
+        else {
             String accountName = getPreferences("name", "");
             loadThreadStart(accountName, reloadCheck);
-
         }
     }
 
     /**
      * アカウント入力ダイアログ表示
+     * @return
      */
     private Dialog showAccountNameDialog() {
         LayoutInflater factory = LayoutInflater.from(mContext);
@@ -122,6 +118,7 @@ public class TumblrWallpaper extends ListActivity {
             }
         });
 
+        // 初期ダイアログ作成
         return new AlertDialog.Builder(mActivity).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
                 .setView(entryView).setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
@@ -139,30 +136,38 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * プリファレンス情報設定
+     * @param key
+     * @param value
      */
-    private void setPreferences(String keyname, String key) {
+    private void setPreferences(String key, String value) {
         SharedPreferences settings = getSharedPreferences("TumblrWallpaper", MODE_PRIVATE);
         SharedPreferences.Editor editor = settings.edit();
-        editor.putString(keyname, key);
+        editor.putString(key, value);
         editor.commit();
     }
 
     /**
      * プリファレンス情報取得
+     * @param key
+     * @param value : プリファレンスから取得失敗した時に設定される値
+     * @return
      */
-    private String getPreferences(String keyname, String key) {
+    private String getPreferences(String key, String value) {
         SharedPreferences settings = getSharedPreferences("TumblrWallpaper", MODE_PRIVATE);
-        return settings.getString(keyname, key);
+        return settings.getString(key, value);
     }
 
     /**
      * Load時のスレッド開始処理
+     * @param accountName : アカウント名
+     * @param reloadCheck : 「次回から自動読み込み」フラグ
      */
     private void loadThreadStart(String accountName, String reloadCheck) {
-        // ロード中ダイアログ表示
-        String mes1 = getResources().getString(R.string.load_progress_dialog_mes1);
-        String mes2 = getResources().getString(R.string.load_progress_dialog_mes2);
-        showPrrogressDialog(mes1, mes2);
+        Log.v(TAG, "program start!");
+        // ロード中はダイアログ表示
+        String title = getResources().getString(R.string.load_progress_dialog_mes1);
+        String mes = getResources().getString(R.string.load_progress_dialog_mes2);
+        showPrrogressDialog(title, mes);
 
         // 非同期で画像取得
         String url = "http://" + accountName + ".tumblr.com/page/";
@@ -173,22 +178,26 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * アカウント情報をプリファレンスに保存
+     * @param accountName : アカウント名
+     * @param reloadCheck : 「次回から自動読み込み」フラグ
      */
     private void setAccountInfo(String accountName, String reloadCheck) {
-        // アカウント情報をプリファレンスに保存
         setPreferences("name", accountName);
         setPreferences("reload", reloadCheck);
     }
 
     /**
      * Load時のプログレスダイアログ表示
+     * @param title
+     * @param mes
      */
-    private void showPrrogressDialog(String mes1, String mes2) {
-        mProgressDialog = ProgressDialog.show(mActivity, mes1, mes2, true);
+    private void showPrrogressDialog(String title, String mes) {
+        mProgressDialog = ProgressDialog.show(mActivity, title, mes, true);
     }
 
     /**
      * 非同期で画像データ取得し、同期を取って画面上に表示させる
+     * @author hyoromo
      */
     class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
@@ -213,14 +222,21 @@ public class TumblrWallpaper extends ListActivity {
             mProgressDialog.dismiss();
             if (adapter != null) {
                 setListAdapter(adapter);
-            } else {
+            }
+            // 画像取得に失敗
+            else {
                 showAlertDialog().show();
             }
+            Log.v(TAG, "program end!");
         }
     }
 
     /**
      * Tumblrからの情報を設定
+     * @param tumblrUrl
+     * @param page : URLのページ数。最初は1から。
+     * @throws IOException
+     * @throws RuntimeException
      */
     private void setListData(String tumblrUrl, int page) throws IOException, RuntimeException {
         int count = 0;
@@ -242,6 +258,7 @@ public class TumblrWallpaper extends ListActivity {
                         mListData[count] = new ListData();
                         mListData[count].position = count;
                         String urlStr = "";
+                        // 一覧表示サイズを250pxに合わせる
                         urlStr = m.group().replaceAll("_500.", "_250.");
                         urlStr = m.group().replaceAll("_400.", "_250.");
                         mListData[count].url = urlStr;
@@ -278,6 +295,7 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * 警告ダイアログを表示
+     * @return
      */
     public AlertDialog showAlertDialog() {
         return new AlertDialog.Builder(mActivity)
@@ -293,6 +311,10 @@ public class TumblrWallpaper extends ListActivity {
         .create();
     }
 
+    /**
+     * 画像取得するためのスレッド
+     * @author hyoromo
+     */
     public class DownloadBitmapThread extends Thread {
         private final int mCount;
         private final int mSleepTime;
@@ -303,61 +325,13 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         public void run() {
-            mListData[mCount].bitmap = getBitmap(mListData[mCount].url, mCount, mSleepTime);
+            mListData[mCount].bitmap = BitmapUtil.getBitmap(mListData[mCount].url, mCount, mSleepTime);
         }
-    }
-
-    private Bitmap getBitmap(final String urlStr, int count, int sleepTime) {
-        Bitmap bmp = null;
-        try {
-            URL url = new URL(urlStr);
-            InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
-
-            // 取得失敗時は少し待機してから再取得する
-            Thread.sleep((SLEEP_TIME + sleepTime) * count);
-            bmp = BitmapFactory.decodeStream(is);
-
-            int dataSize = is.read();
-            is.close();
-
-            // 取得できなかった場合は再取得処理
-            if (bmp == null && count < 4) {
-                int time = 0;
-                // 読み込み漏らしサイズ量でsleep時間を増やす
-                if (dataSize > 200) {
-                    time = SLEEP_TIME * 3;
-                } else if (dataSize > 150) {
-                    time = SLEEP_TIME * 2;
-                } else if (dataSize > 100) {
-                    time = SLEEP_TIME;
-                }
-                bmp = getBitmap(urlStr, ++count, time);
-            }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            String newStr = "";
-            if (Pattern.compile(".+_500\\..+").matcher(urlStr).matches()) {
-                newStr = urlStr.replaceAll("_500.", "_400.");
-            } else if (Pattern.compile(".+_400\\..+").matcher(urlStr).matches()) {
-                newStr = urlStr.replaceAll("_400.", "_250.");
-            } else if (Pattern.compile(".+_250\\..+").matcher(urlStr).matches()) {
-                newStr = urlStr.replaceAll("_250.", "_100.");
-            } else {
-                // 【未実装】壁紙貼り付け失敗ダイアログ表示
-                e.printStackTrace();
-            }
-            bmp = getBitmap(newStr, count, 0);
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return bmp;
     }
 
     /**
-     * ArrayAdapter を拡張したクラス。 画像を一覧表示させている。
+     * ArrayAdapterを拡張したクラス。 画像を一覧表示させている。
+     * @author hyoromo
      */
     public class IconicAdapter extends ArrayAdapter<Object> {
 
@@ -367,6 +341,9 @@ public class TumblrWallpaper extends ListActivity {
 
         /**
          * 画面に表示される毎に呼び出される
+         * @param position : 表示する対象Listの一覧を上から数えたときの番号
+         * @param convertView : 表示する対象ListのView
+         * @param parent : 知らん
          */
         public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
@@ -406,6 +383,10 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * Listがクリックされたら選択画像を壁紙設定する
+     * @param parent : 知らん
+     * @param v : 選択されたListのView
+     * @param position : 選択されたListの上から数えたときの番号
+     * @param id : 知らん
      */
     public void onListItemClick(ListView parent, View v, int position, long id) {
         // 選択ダイアログが空の場合
@@ -427,7 +408,7 @@ public class TumblrWallpaper extends ListActivity {
             new Thread(new Runnable() {
                 public void run() {
                     try {
-                        final Bitmap bmp = ScaleBitmap.getScaleBitmap(getBitmap(str, 0, 0), hw, hh);
+                        final Bitmap bmp = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0), hw, hh);
                         if (bmp != null) {
                             setWallpaper(bmp);
                         } else {
@@ -447,6 +428,7 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * 空リスト選択ダイアログを表示
+     * @return
      */
     public AlertDialog showNullRowSelDialog() {
         return new AlertDialog.Builder(mActivity)
@@ -487,6 +469,7 @@ public class TumblrWallpaper extends ListActivity {
 
     /**
      * アカウント入力ダイアログ表示
+     * @return
      */
     private Dialog showReloadSettingDialog() {
         LayoutInflater factory = LayoutInflater.from(mContext);
@@ -522,6 +505,7 @@ public class TumblrWallpaper extends ListActivity {
             }
         });
 
+        // 設定ダイアログを作成
         return new AlertDialog.Builder(mActivity)
                 .setIcon(R.drawable.icon)
                 .setTitle(R.string.load_alert_name_dialog_title)
