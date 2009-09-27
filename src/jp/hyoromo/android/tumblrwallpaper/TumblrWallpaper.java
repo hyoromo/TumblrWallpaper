@@ -50,12 +50,11 @@ public class TumblrWallpaper extends ListActivity {
     private static Context mContext;
     private static Activity mActivity;
     private static ListData []mListData;
+    private static AsyncTask<String, Void, IconicAdapter> mAsyncTask;
     private static Thread mBitmapScaleThread;
     private static Bitmap mWallpaperBitmap;
     int titleId;
     int mesId;
-
-    // private static Activity mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -171,7 +170,7 @@ public class TumblrWallpaper extends ListActivity {
 
         // 非同期で画像取得
         String url = "http://" + accountName + ".tumblr.com/page/";
-        new ImageTask().execute(url);
+        mAsyncTask = new ImageTask().execute(url);
 
         setAccountInfo(accountName, reloadCheck);
     }
@@ -227,6 +226,7 @@ public class TumblrWallpaper extends ListActivity {
             else {
                 showAlertDialog().show();
             }
+            mAsyncTask = null;
         }
     }
 
@@ -570,6 +570,10 @@ public class TumblrWallpaper extends ListActivity {
 
         mWallpaperBitmap = null;
         mBitmapScaleThread = null;
+        if (mAsyncTask != null && mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
+            mAsyncTask.cancel(true);
+            mAsyncTask = null;
+        }
         mListData = null;
         mActivity = null;
         mContext = null;
