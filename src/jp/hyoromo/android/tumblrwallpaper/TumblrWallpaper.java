@@ -50,7 +50,7 @@ public class TumblrWallpaper extends ListActivity {
     private static Context mContext;
     private static Activity mActivity;
     private static ListData []mListData;
-    private static AsyncTask<String, Void, IconicAdapter> mAsyncTask;
+    private static AsyncTask mAsyncTask;
     private static Thread mBitmapScaleThread;
     private static Bitmap mWallpaperBitmap;
     int titleId;
@@ -163,11 +163,6 @@ public class TumblrWallpaper extends ListActivity {
      * @param reloadCheck : 「次回から自動読み込み」フラグ
      */
     private void loadThreadStart(String accountName, String reloadCheck) {
-        // ロード中はダイアログ表示
-        String title = getResources().getString(R.string.load_progress_dialog_mes1);
-        String mes = getResources().getString(R.string.load_progress_dialog_mes2);
-        showPrrogressDialog(title, mes);
-
         // 非同期で画像取得
         String url = "http://" + accountName + ".tumblr.com/page/";
         mAsyncTask = new ImageTask().execute(url);
@@ -186,19 +181,18 @@ public class TumblrWallpaper extends ListActivity {
     }
 
     /**
-     * Load時のプログレスダイアログ表示
-     * @param title
-     * @param mes
-     */
-    private void showPrrogressDialog(String title, String mes) {
-        mProgressDialog = ProgressDialog.show(mActivity, title, mes, true);
-    }
-
-    /**
      * 非同期で画像データ取得し、同期を取って画面上に表示させる
      * @author hyoromo
      */
     class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
+        @Override
+        protected void onPreExecute() {
+            // ロード中はダイアログ表示
+            String title = getResources().getString(R.string.load_progress_dialog_mes1);
+            String mes = getResources().getString(R.string.load_progress_dialog_mes2);
+            showPrrogressDialog(title, mes);
+        }
+
         @Override
         protected IconicAdapter doInBackground(String... params) {
             mListData = new ListData[LIST_MAX];
@@ -228,6 +222,15 @@ public class TumblrWallpaper extends ListActivity {
             }
             mAsyncTask = null;
         }
+    }
+
+    /**
+     * プログレスダイアログ表示
+     * @param title
+     * @param mes
+     */
+    private void showPrrogressDialog(String title, String mes) {
+        mProgressDialog = ProgressDialog.show(mActivity, title, mes, true);
     }
 
     /**
@@ -409,6 +412,10 @@ public class TumblrWallpaper extends ListActivity {
         }
     }
 
+    /**
+     * 壁紙貼り付け確認アラートダイアログ
+     * @return
+     */
     public AlertDialog showCheckWallpaperDialog() {
         return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.icon)
@@ -416,12 +423,8 @@ public class TumblrWallpaper extends ListActivity {
         .setMessage(R.string.check_wallpaper_dialog_mes)
         .setPositiveButton(R.string.check_wallpaper_dialog_button1, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
-                String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
-                showPrrogressDialog(mes1, mes2);
-
                 // 壁紙設定
-                setWallpaper();
+                mAsyncTask = new Wallpaper().execute();
             }
         })
         .setNegativeButton(R.string.check_wallpaper_dialog_button2, new DialogInterface.OnClickListener() {
@@ -434,30 +437,43 @@ public class TumblrWallpaper extends ListActivity {
     /**
      * 壁紙設定
      */
-    public void setWallpaper() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    mBitmapScaleThread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    if (mWallpaperBitmap != null) {
-                        setWallpaper(mWallpaperBitmap);
-                    } else {
-                        // Bitmap取得に失敗したときはデフォルト壁紙を設定
-                        clearWallpaper();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mProgressDialog.dismiss();
-                // 壁紙設定後に Activity を終了させる。
-                finish();
+    class Wallpaper extends AsyncTask<String, Void, Void> {
+        @Override
+        protected void onPreExecute() {
+            String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
+            String mes2 = getResources().getString(R.string.wallpaper_progress_dialog_mes2);
+            showPrrogressDialog(mes1, mes2);
+        }
+
+        @Override
+        protected Void doInBackground(String... params) {
+            try {
+                mBitmapScaleThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        }).start();
+            try {
+                if (mWallpaperBitmap != null) {
+                    setWallpaper(mWallpaperBitmap);
+                } else {
+                    // Bitmap取得に失敗したときはデフォルト壁紙を設定
+                    clearWallpaper();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void parm) {
+            mProgressDialog.dismiss();
+            mAsyncTask = null;
+            // 壁紙設定後に Activity を終了させる。
+            finish();
+        }
     }
+
     /**
      * 空リスト選択ダイアログを表示
      * @return
