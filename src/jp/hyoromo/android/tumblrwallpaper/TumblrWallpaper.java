@@ -242,13 +242,16 @@ public class TumblrWallpaper extends ListActivity {
         mProgressDialog.setTitle(R.string.load_progress_bar_dialog_title);
         mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mProgressDialog.setMax(MAX_PROGRESS);
-        /*
+        // 初期ダイアログ表示
         mProgressDialog.setButton(getText(R.string.load_progress_bar_dialog_button1), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                // 再読込
+                clearThreadData();
+                mProgressDialog.dismiss();
+                mDialog = showAccountNameDialog();
+                mDialog.show();
             }
         });
-        */
+        // アプリ終了
         mProgressDialog.setButton2(getText(R.string.load_progress_bar_dialog_button2), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 finish();
@@ -633,6 +636,17 @@ public class TumblrWallpaper extends ListActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+        clearThreadData();
+        mActivity = null;
+        mContext = null;
+        mDialog = null;
+        mProgressDialog = null;
+    }
+
+    /**
+     * スレッド関係のクラス変数をクリア
+     */
+    private void clearThreadData() {
         mWallpaperBitmap = null;
         if (mBitmapThreads != null) {
             for (int i = 0; i < mBitmapThreads.length; i++) {
@@ -649,9 +663,5 @@ public class TumblrWallpaper extends ListActivity {
         }
         mAsyncTask = null;
         mListData = null;
-        mActivity = null;
-        mContext = null;
-        mDialog = null;
-        mProgressDialog = null;
     }
 }
