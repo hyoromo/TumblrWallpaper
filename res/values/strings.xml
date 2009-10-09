@@ -6,8 +6,9 @@
     <string name="load_alert_name_dialog_title">Please input the account name of Tumblr.</string>
     <string name="load_alert_name_dialog_button1">Load</string>
     <string name="load_alert_name_dialog_button2">End</string>
-    <string name="load_progress_dialog_mes1">Loading</string>
-    <string name="load_progress_dialog_mes2">The image is being acquired.\nPlease wait for a while...</string>
+    <string name="load_progress_bar_dialog_title">Now Loading</string>
+    <string name="load_progress_bar_dialog_button1">Reload</string>
+    <string name="load_progress_bar_dialog_button2">Cancel</string>
     <string name="wallpaper_progress_dialog_mes1">Wallpapering</string>
     <string name="wallpaper_progress_dialog_mes2">The wallpaper is being set.\nPlease wait for a while...</string>
     <string name="err1_alert_dialog_title">Image acquisition failure</string>

@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.regex.Pattern;
 
+import android.app.ProgressDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
@@ -31,7 +32,7 @@ public class BitmapUtil {
      * @param sleepTime : Bitmap取得前のスリープ時間。初回は0で、失敗してからスリープするようにする。
      * @return
      */
-    public static Bitmap getBitmap(final String urlStr, int count, int sleepTime) {
+    public static Bitmap getBitmap(final String urlStr, int count, final int sleepTime, final ProgressDialog progressDialog) {
         Bitmap bmp = null;
         BitmapFactory.Options bm_opt;
 
@@ -59,7 +60,7 @@ public class BitmapUtil {
                 } else if (dataSize > 100) {
                     time = SLEEP_TIME;
                 }
-                bmp = getBitmap(urlStr, ++count, time);
+                bmp = getBitmap(urlStr, ++count, time, null);
             }
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -75,13 +76,21 @@ public class BitmapUtil {
                 // 【未実装】壁紙貼り付け失敗ダイアログ表示
                 e.printStackTrace();
             }
-            bmp = getBitmap(newStr, count, 0);
+            bmp = getBitmap(newStr, count, 0, null);
 
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
+        if (progressDialog != null) {
+            setProgressBarCount(progressDialog);
+        }
+
         return bmp;
+    }
+
+    private static void setProgressBarCount(ProgressDialog progressDialog) {
+        progressDialog.incrementProgressBy(5);
     }
 
     /**

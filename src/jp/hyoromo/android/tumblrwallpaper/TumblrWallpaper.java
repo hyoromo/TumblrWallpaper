@@ -45,12 +45,14 @@ public class TumblrWallpaper extends ListActivity {
     private static final int BUTTON_MAX = 10;
     private static final int LIST_MAX = 10;
     private static final int PAGE_MAX = 5;
+    private static final int MAX_PROGRESS = 100;
     private static ProgressDialog mProgressDialog;
     private static Dialog mDialog;
     private static Context mContext;
     private static Activity mActivity;
     private static ListData []mListData;
     private static AsyncTask mAsyncTask;
+    private static DownloadBitmapThread []mBitmapThreads;
     private static Thread mBitmapScaleThread;
     private static Bitmap mWallpaperBitmap;
     int titleId;
@@ -119,19 +121,22 @@ public class TumblrWallpaper extends ListActivity {
         });
 
         // 初期ダイアログ作成
-        return new AlertDialog.Builder(mActivity).setIcon(R.drawable.icon).setTitle(R.string.load_alert_name_dialog_title)
-                .setView(entryView).setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        // 非同期で画像取得
-                        String accountName = edit.getText().toString();
-                        String reloadCheck = String.valueOf(check.isChecked());
-                        loadThreadStart(accountName, reloadCheck);
-                    }
-                }).setNegativeButton(R.string.load_alert_name_dialog_button2, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        finish();
-                    }
-                }).create();
+        return new AlertDialog.Builder(mActivity)
+            .setIcon(R.drawable.icon)
+            .setTitle(R.string.load_alert_name_dialog_title)
+            .setView(entryView)
+            .setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    // 非同期で画像取得
+                    String accountName = edit.getText().toString();
+                    String reloadCheck = String.valueOf(check.isChecked());
+                    loadThreadStart(accountName, reloadCheck);
+                }
+            }).setNegativeButton(R.string.load_alert_name_dialog_button2, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    finish();
+                }
+            }).create();
     }
 
     /**
@@ -187,10 +192,8 @@ public class TumblrWallpaper extends ListActivity {
     class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
         protected void onPreExecute() {
-            // ロード中はダイアログ表示
-            String title = getResources().getString(R.string.load_progress_dialog_mes1);
-            String mes = getResources().getString(R.string.load_progress_dialog_mes2);
-            showPrrogressDialog(title, mes);
+            // ロード中はプログレスバーダイアログ表示
+            showPrrogressBarDialog();
         }
 
         @Override
@@ -199,7 +202,9 @@ public class TumblrWallpaper extends ListActivity {
             IconicAdapter adapter = null;
             try {
                 setListData(params[0], 1);
+                mProgressDialog.incrementProgressBy(5);
                 adapter = new IconicAdapter();
+                mProgressDialog.incrementProgressBy(5);
             } catch (IOException e) {
                 titleId = R.string.err1_alert_dialog_title;
                 mesId = R.string.err1_alert_dialog_mes;
@@ -212,7 +217,9 @@ public class TumblrWallpaper extends ListActivity {
 
         @Override
         protected void onPostExecute(IconicAdapter adapter) {
-            mProgressDialog.dismiss();
+            if (mProgressDialog != null) {
+                mProgressDialog.dismiss();
+            }
             if (adapter != null) {
                 setListAdapter(adapter);
             }
@@ -222,6 +229,32 @@ public class TumblrWallpaper extends ListActivity {
             }
             mAsyncTask = null;
         }
+    }
+
+    /**
+     * プログレスバーダイアログ表示
+     * @param title
+     * @param mes
+     */
+    private void showPrrogressBarDialog() {
+        mProgressDialog = new ProgressDialog(mActivity);
+        mProgressDialog.setIcon(R.drawable.icon);
+        mProgressDialog.setTitle(R.string.load_progress_bar_dialog_title);
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mProgressDialog.setMax(MAX_PROGRESS);
+        /*
+        mProgressDialog.setButton(getText(R.string.load_progress_bar_dialog_button1), new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                // 再読込
+            }
+        });
+        */
+        mProgressDialog.setButton2(getText(R.string.load_progress_bar_dialog_button2), new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                finish();
+            }
+        });
+        mProgressDialog.show();
     }
 
     /**
@@ -242,7 +275,8 @@ public class TumblrWallpaper extends ListActivity {
      */
     private void setListData(String tumblrUrl, int page) throws IOException, RuntimeException {
         int count = 0;
-        DownloadBitmapThread []mBitmapThreads = new DownloadBitmapThread[BUTTON_MAX];
+        int barCountDown = 40;
+        mBitmapThreads = new DownloadBitmapThread[BUTTON_MAX];
         while (count < BUTTON_MAX && page < PAGE_MAX) {
             try {
                 URL url = new URL(tumblrUrl + Integer.toString(page++));
@@ -251,6 +285,10 @@ public class TumblrWallpaper extends ListActivity {
                         .compile("http\\:\\/\\/\\d+.media\\.tumblr\\.com\\/(?!avatar_)[\\-_\\.\\!\\~\\*\\'\\(\\)a-zA-Z0-9\\;\\/\\?\\:@&=\\$\\,\\%\\#]+\\.(jpg|jpeg|png|gif|bmp)");
                 urlCon.setRequestMethod("GET");
                 BufferedReader urlIn = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+                if (barCountDown > 10) {
+                    mProgressDialog.incrementProgressBy(10);
+                    barCountDown -= 10;
+                }
 
                 String str;
                 while ((str = urlIn.readLine()) != null && count < BUTTON_MAX) {
@@ -271,6 +309,10 @@ public class TumblrWallpaper extends ListActivity {
 
                         count++;
                     }
+                    if (barCountDown != 0) {
+                        mProgressDialog.incrementProgressBy(1);
+                        barCountDown--;
+                    }
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -281,6 +323,9 @@ public class TumblrWallpaper extends ListActivity {
         if (mBitmapThreads[0] == null) {
             throw new RuntimeException();
         }
+
+        // 残っているカウントダウン分をProgressBarに加算
+        mProgressDialog.incrementProgressBy(barCountDown);
 
         // Bitmap取得スレッドが全て終わるまで待機
         for (int threadCount = 0; threadCount < BUTTON_MAX; threadCount++) {
@@ -327,7 +372,11 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         public void run() {
-            mListData[mCount].bitmap = BitmapUtil.getBitmap(mListData[mCount].url, mCount, mSleepTime);
+            try {
+                mListData[mCount].bitmap = BitmapUtil.getBitmap(mListData[mCount].url, mCount, mSleepTime, mProgressDialog);
+            } catch (NullPointerException e) {
+                // スレッド異常なため処理をスローさせる
+            }
         }
     }
 
@@ -403,7 +452,7 @@ public class TumblrWallpaper extends ListActivity {
 
                     // 画像を取得してスケール
                     String str = mListData[position].url.replaceAll("_250.", "_500.");
-                    mWallpaperBitmap = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0), hw, hh);
+                    mWallpaperBitmap = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0, null), hw, hh);
                 }
             });
             mBitmapScaleThread.start();
@@ -585,11 +634,20 @@ public class TumblrWallpaper extends ListActivity {
         super.onDestroy();
 
         mWallpaperBitmap = null;
+        if (mBitmapThreads != null) {
+            for (int i = 0; i < mBitmapThreads.length; i++) {
+                if (mBitmapThreads[i] != null && mBitmapThreads[i].isAlive() == true) {
+                    mBitmapThreads[i].interrupt();
+                    mBitmapThreads[i] = null;
+                }
+            }
+            mBitmapThreads = null;
+        }
         mBitmapScaleThread = null;
         if (mAsyncTask != null && mAsyncTask.getStatus() == AsyncTask.Status.RUNNING) {
             mAsyncTask.cancel(true);
-            mAsyncTask = null;
         }
+        mAsyncTask = null;
         mListData = null;
         mActivity = null;
         mContext = null;
