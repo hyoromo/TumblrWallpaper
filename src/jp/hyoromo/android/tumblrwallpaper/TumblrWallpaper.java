@@ -125,6 +125,7 @@ public class TumblrWallpaper extends ListActivity {
             .setIcon(R.drawable.icon)
             .setTitle(R.string.load_alert_name_dialog_title)
             .setView(entryView)
+            .setCancelable(false)
             .setPositiveButton(R.string.load_alert_name_dialog_button1, new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int whichButton) {
                     // 非同期で画像取得
@@ -242,6 +243,7 @@ public class TumblrWallpaper extends ListActivity {
         mProgressDialog.setTitle(R.string.load_progress_bar_dialog_title);
         mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mProgressDialog.setMax(MAX_PROGRESS);
+        mProgressDialog.setCancelable(false);   // キャンセルキー無効
         // 初期ダイアログ表示
         mProgressDialog.setButton(getText(R.string.load_progress_bar_dialog_button1), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {

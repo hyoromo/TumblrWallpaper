@@ -5,7 +5,7 @@
     <string name="load_alert_name_dialog_name">Account Name</string>
     <string name="load_alert_name_dialog_title">Please input the account name of Tumblr.</string>
     <string name="load_alert_name_dialog_button1">Load</string>
-    <string name="load_alert_name_dialog_button2">End</string>
+    <string name="load_alert_name_dialog_button2">Cancel</string>
     <string name="load_progress_bar_dialog_title">Now Loading</string>
     <string name="load_progress_bar_dialog_button1">Setting</string>
     <string name="load_progress_bar_dialog_button2">Cancel</string>

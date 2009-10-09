@@ -8,7 +8,7 @@
     <string name="load_alert_name_dialog_button2">終了</string>
     <string name="load_progress_bar_dialog_title">起動中</string>
     <string name="load_progress_bar_dialog_button1">再設定</string>
-    <string name="load_progress_bar_dialog_button2">中止</string>
+    <string name="load_progress_bar_dialog_button2">終了</string>
     <string name="wallpaper_progress_dialog_mes1">壁紙設定中</string>
     <string name="wallpaper_progress_dialog_mes2">壁紙を設定中です。\nしばらくお待ちください...</string>
     <string name="err1_alert_dialog_title">画像取得失敗</string>

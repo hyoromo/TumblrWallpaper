@@ -22,6 +22,7 @@
         android:autoText="false"
         android:capitalize="none"
         android:gravity="fill_horizontal"
+        android:inputType="textUri"
         android:textAppearance="?android:attr/textAppearanceMedium" />
     <CheckBox
         android:id="@+id/reaccount_use"
