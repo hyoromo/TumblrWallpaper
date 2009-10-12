@@ -17,6 +17,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.content.DialogInterface.OnCancelListener;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -239,11 +240,10 @@ public class TumblrWallpaper extends ListActivity {
      */
     private void showPrrogressBarDialog() {
         mProgressDialog = new ProgressDialog(mActivity);
-        mProgressDialog.setIcon(R.drawable.icon);
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         mProgressDialog.setTitle(R.string.load_progress_bar_dialog_title);
         mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mProgressDialog.setMax(MAX_PROGRESS);
-        mProgressDialog.setCancelable(false);   // キャンセルキー無効
         // 初期ダイアログ表示
         mProgressDialog.setButton(getText(R.string.load_progress_bar_dialog_button1), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
@@ -260,6 +260,14 @@ public class TumblrWallpaper extends ListActivity {
             }
         });
         mProgressDialog.show();
+
+        // バックボタンが押されたとき
+        mProgressDialog.setOnCancelListener(new OnCancelListener(){
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                finish();
+            }
+       });
     }
 
     /**
