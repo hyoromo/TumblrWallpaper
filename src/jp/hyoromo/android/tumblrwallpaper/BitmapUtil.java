@@ -12,14 +12,13 @@ import android.app.ProgressDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
-import android.util.Log;
 
 /**
  * Bitmapを指定サイズにスケールします。
  * 
  * @author hyoromo
  */
-public class BitmapUtil {
+public final class BitmapUtil {
 
     private static final String TAG = "ScaleBitmap";
     private static final int SLEEP_TIME = 250;
@@ -32,7 +31,7 @@ public class BitmapUtil {
      * @param sleepTime : Bitmap取得前のスリープ時間。初回は0で、失敗してからスリープするようにする。
      * @return
      */
-    public static Bitmap getBitmap(final String urlStr, int count, final int sleepTime, final ProgressDialog progressDialog) {
+    public static final Bitmap getBitmap(final String urlStr, int count, final int sleepTime, final ProgressDialog progressDialog) {
         Bitmap bmp = null;
         BitmapFactory.Options bm_opt;
 
@@ -50,7 +49,6 @@ public class BitmapUtil {
 
             // 取得できなかった場合は再取得処理
             if (bmp == null && count < 4) {
-                Log.v(TAG, Integer.valueOf(count) + ":" + urlStr);
                 int time = 0;
                 // 読み込み漏らしサイズ量でsleep時間を増やす
                 if (dataSize > 200) {
@@ -100,7 +98,7 @@ public class BitmapUtil {
      * @param height : 画面の高さ
      * @return
      */
-    public static Bitmap getScaleBitmap(Bitmap bmp, int width, int height) {
+    public static final Bitmap getScaleBitmap(Bitmap bmp, int width, int height) {
         if (bmp != null) {
             Point point = saleSize(bmp, width, height);
             bmp = Bitmap.createScaledBitmap(bmp, point.x, point.y, true);

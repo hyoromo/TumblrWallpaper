@@ -56,8 +56,8 @@ public class TumblrWallpaper extends ListActivity {
     private static DownloadBitmapThread []mBitmapThreads;
     private static Thread mBitmapScaleThread;
     private static Bitmap mWallpaperBitmap;
-    int titleId;
-    int mesId;
+    private static int titleId;
+    private static int mesId;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -191,7 +191,7 @@ public class TumblrWallpaper extends ListActivity {
      * 非同期で画像データ取得し、同期を取って画面上に表示させる
      * @author hyoromo
      */
-    class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
+    private class ImageTask extends AsyncTask<String, Void, IconicAdapter> {
         @Override
         protected void onPreExecute() {
             // ロード中はプログレスバーダイアログ表示
@@ -199,7 +199,7 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         @Override
-        protected IconicAdapter doInBackground(String... params) {
+        protected final IconicAdapter doInBackground(String... params) {
             mListData = new ListData[LIST_MAX];
             IconicAdapter adapter = null;
             try {
@@ -218,7 +218,7 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         @Override
-        protected void onPostExecute(IconicAdapter adapter) {
+        protected final void onPostExecute(IconicAdapter adapter) {
             if (mProgressDialog != null) {
                 mProgressDialog.dismiss();
             }
@@ -357,7 +357,7 @@ public class TumblrWallpaper extends ListActivity {
      * 警告ダイアログを表示
      * @return
      */
-    public AlertDialog showAlertDialog() {
+    private AlertDialog showAlertDialog() {
         return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.alert_dialog_icon)
         .setTitle(titleId)
@@ -375,7 +375,7 @@ public class TumblrWallpaper extends ListActivity {
      * 画像取得するためのスレッド
      * @author hyoromo
      */
-    public class DownloadBitmapThread extends Thread {
+    private class DownloadBitmapThread extends Thread {
         private final int mCount;
         private final int mSleepTime;
 
@@ -397,7 +397,7 @@ public class TumblrWallpaper extends ListActivity {
      * ArrayAdapterを拡張したクラス。 画像を一覧表示させている。
      * @author hyoromo
      */
-    public class IconicAdapter extends ArrayAdapter<Object> {
+    private class IconicAdapter extends ArrayAdapter<Object> {
 
         IconicAdapter() {
             super(mContext, R.layout.row, mListData);
@@ -409,7 +409,7 @@ public class TumblrWallpaper extends ListActivity {
          * @param convertView : 表示する対象ListのView
          * @param parent : 知らん
          */
-        public View getView(int position, View convertView, ViewGroup parent) {
+        final public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
 
             if (mListData[position] != null) {
@@ -452,7 +452,7 @@ public class TumblrWallpaper extends ListActivity {
      * @param position : 選択されたListの上から数えたときの番号
      * @param id : 知らん
      */
-    public void onListItemClick(ListView parent, View v, final int position, long id) {
+    public final void onListItemClick(ListView parent, View v, final int position, long id) {
         // 選択ダイアログが空の場合
         if (mListData[position] == null) {
             showNullRowSelDialog().show();
@@ -478,7 +478,7 @@ public class TumblrWallpaper extends ListActivity {
      * 壁紙貼り付け確認アラートダイアログ
      * @return
      */
-    public AlertDialog showCheckWallpaperDialog() {
+    private AlertDialog showCheckWallpaperDialog() {
         return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.icon)
         .setTitle(R.string.check_wallpaper_dialog_title)
@@ -499,7 +499,7 @@ public class TumblrWallpaper extends ListActivity {
     /**
      * 壁紙設定
      */
-    class Wallpaper extends AsyncTask<String, Void, Void> {
+    private class Wallpaper extends AsyncTask<String, Void, Void> {
         @Override
         protected void onPreExecute() {
             String mes1 = getResources().getString(R.string.wallpaper_progress_dialog_mes1);
@@ -508,7 +508,7 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         @Override
-        protected Void doInBackground(String... params) {
+        protected final Void doInBackground(String... params) {
             try {
                 mBitmapScaleThread.join();
             } catch (InterruptedException e) {
@@ -528,7 +528,7 @@ public class TumblrWallpaper extends ListActivity {
         }
 
         @Override
-        protected void onPostExecute(Void parm) {
+        protected final void onPostExecute(Void parm) {
             mProgressDialog.dismiss();
             mAsyncTask = null;
             // 壁紙設定後に Activity を終了させる。
@@ -540,7 +540,7 @@ public class TumblrWallpaper extends ListActivity {
      * 空リスト選択ダイアログを表示
      * @return
      */
-    public AlertDialog showNullRowSelDialog() {
+    private AlertDialog showNullRowSelDialog() {
         return new AlertDialog.Builder(mActivity)
         .setIcon(R.drawable.alert_dialog_icon)
         .setTitle(R.string.null_row_sel_dialog_title)
@@ -556,7 +556,7 @@ public class TumblrWallpaper extends ListActivity {
      * menuボタン作成
      */
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public final boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
@@ -567,7 +567,7 @@ public class TumblrWallpaper extends ListActivity {
      * meny押下時のイベント
      */
     @Override
-    public boolean onOptionsItemSelected(MenuItem items) {
+    public final boolean onOptionsItemSelected(MenuItem items) {
         switch (items.getItemId()) {
         case R.id.menu_reload_setting:
             mDialog = showReloadSettingDialog();
