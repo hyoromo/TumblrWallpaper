@@ -3,20 +3,27 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="jp.hyoromo.android.tumblrwallpaper"
     android:versionName="1.0.3"
-    android:versionCode="4" >
-    <uses-sdk android:minSdkVersion="3" />
+    android:versionCode="4">
+    <uses-sdk
+        android:minSdkVersion="3" />
     <application
-        android:icon="@drawable/icon">
+        android:name="@string/app_name"
+        android:icon="@drawable/icon"
+        android:debuggable="true">
         <activity
             android:name=".TumblrWallpaper"
             android:label="@string/app_name"
-            android:configChanges="orientation|keyboardHidden" >
+            android:configChanges="orientation|keyboardHidden">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action
+                    android:name="android.intent.action.MAIN" />
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
-    <uses-permission android:name="android.permission.SET_WALLPAPER" />
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission
+        android:name="android.permission.INTERNET" />
 </manifest> 

@@ -1,9 +1,10 @@
 package jp.hyoromo.android.tumblrwallpaper;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.regex.Pattern;
@@ -21,45 +22,33 @@ import android.graphics.Point;
 public final class BitmapUtil {
 
     private static final String TAG = "ScaleBitmap";
-    private static final int SLEEP_TIME = 250;
-    private static final int DEFAULT_BUFFER_SIZE = 1024 * 100;
 
     /**
      * Bitmapを取得してきます
      * @param urlStr : 画像URL
-     * @param count : 同一画像URLで何回再取得したかの回数
-     * @param sleepTime : Bitmap取得前のスリープ時間。初回は0で、失敗してからスリープするようにする。
      * @return
      */
-    public static final Bitmap getBitmap(final String urlStr, int count, final int sleepTime, final ProgressDialog progressDialog) {
+    public static final Bitmap getBitmap(final String urlStr, final ProgressDialog progressDialog) {
         Bitmap bmp = null;
-        BitmapFactory.Options bm_opt;
+        byte[] line = new byte[1024];
+        int byteSize = 0;
 
         try {
             URL url = new URL(urlStr);
-            InputStream is = new BufferedInputStream(url.openStream(), DEFAULT_BUFFER_SIZE);
-            bm_opt = new BitmapFactory.Options();
-
-            // 取得失敗時は少し待機してから再取得する
-            Thread.sleep((SLEEP_TIME + sleepTime) * count);
-            bmp = BitmapFactory.decodeStream(is, null, bm_opt);
-
-            int dataSize = is.read();
-            is.close();
-
-            // 取得できなかった場合は再取得処理
-            if (bmp == null && count < 4) {
-                int time = 0;
-                // 読み込み漏らしサイズ量でsleep時間を増やす
-                if (dataSize > 200) {
-                    time = SLEEP_TIME * 3;
-                } else if (dataSize > 150) {
-                    time = SLEEP_TIME * 2;
-                } else if (dataSize > 100) {
-                    time = SLEEP_TIME;
-                }
-                bmp = getBitmap(urlStr, ++count, time, null);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.connect();
+            InputStream is = con.getInputStream();
+            
+            // バイト単位での読込
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            while ((byteSize = is.read(line)) > 0) {
+                out.write(line, 0, byteSize);
             }
+
+            byte[] byteArray = out.toByteArray();
+            bmp = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+            is.close();
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -74,10 +63,7 @@ public final class BitmapUtil {
                 // 【未実装】壁紙貼り付け失敗ダイアログ表示
                 e.printStackTrace();
             }
-            bmp = getBitmap(newStr, count, 0, null);
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            bmp = getBitmap(newStr, null);
         }
 
         if (progressDialog != null) {
@@ -102,7 +88,17 @@ public final class BitmapUtil {
         if (bmp != null) {
             Point point = saleSize(bmp, width, height);
             bmp = Bitmap.createScaledBitmap(bmp, point.x, point.y, true);
-        }
+            /* 2.0対応するための対処法
+            Bitmap backBmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            // bmp = backBmp.createBitmap(bmp, 0, 0, point.x, point.y);
+            Canvas canvas = new Canvas(backBmp);
+            canvas.drawBitmap(bmp, 0, 0, null);
+            BitmapDrawable drawable = new BitmapDrawable(backBmp);
+            drawable.draw(canvas);
+            bmp = drawable.getBitmap();
+            // drawable.draw(canvas);
+             */
+            }
         return bmp;
     }
 
@@ -115,16 +111,17 @@ public final class BitmapUtil {
      */
     private static Point saleSize(Bitmap bmp, int width, int height) {
         Point point = new Point(0, 0);
-        int changeY = 0;
 
         // 画像の幅と高さ
         int bmpWidth = bmp.getWidth();
         int bmpHeight = bmp.getHeight();
 
-        changeY = height - bmpHeight;
+        int changeX = width - bmpWidth;
+        int changeY = height - bmpHeight;
         BigDecimal scale = new BigDecimal("0");
         // 差がマイナスであることを最優先に確認します
         scale = scaleData(bmpHeight, changeY);
+        // scale = scaleData(bmpWidth, changeX);
 
         point.x = scale.multiply(new BigDecimal(Integer.toString(bmpWidth))).intValue();
         point.y = scale.multiply(new BigDecimal(Integer.toString(bmpHeight))).intValue();

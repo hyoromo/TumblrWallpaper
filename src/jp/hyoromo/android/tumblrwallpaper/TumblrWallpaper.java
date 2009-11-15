@@ -377,16 +377,14 @@ public class TumblrWallpaper extends ListActivity {
      */
     private class DownloadBitmapThread extends Thread {
         private final int mCount;
-        private final int mSleepTime;
 
         DownloadBitmapThread(int count, int sleepTime) {
             mCount = count;
-            mSleepTime = sleepTime;
         }
 
         public void run() {
             try {
-                mListData[mCount].bitmap = BitmapUtil.getBitmap(mListData[mCount].url, mCount, mSleepTime, mProgressDialog);
+                mListData[mCount].bitmap = BitmapUtil.getBitmap(mListData[mCount].url, mProgressDialog);
             } catch (NullPointerException e) {
                 // スレッド異常なため処理をスローさせる
             }
@@ -465,7 +463,7 @@ public class TumblrWallpaper extends ListActivity {
 
                     // 画像を取得してスケール
                     String str = mListData[position].url.replaceAll("_250.", "_500.");
-                    mWallpaperBitmap = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, 0, 0, null), hw, hh);
+                    mWallpaperBitmap = BitmapUtil.getScaleBitmap(BitmapUtil.getBitmap(str, null), hw, hh);
                 }
             });
             mBitmapScaleThread.start();
